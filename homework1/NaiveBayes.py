@@ -53,6 +53,20 @@ class ClassInfo(object):
             attribute.computeMean()
             attribute.computeStandardDeviation()
 
+    # Given a test example, compute its probability
+    def classify(self, row, classFrequency):
+        probability = classFrequency
+        for i in range(1, self.numAttributes + 1):
+            value = eval(row[i])
+            probability *= self.attributes[i-1].GaussianPDF(value)
+
+        # take natural log
+        # probability = math.log(classFrequency)
+        # for i in range(1, self.numAttributes + 1):
+        #     value = eval(row[i])
+        #     probability += math.log(self.attributes[i-1].GaussianPDF(value))
+        return probability
+
     def getAttributeMean(self):
         res = "["
         for attribute in self.attributes:
@@ -103,6 +117,19 @@ class Classifer(object):
         for label in self.classes:
             self.classFrequency[label] = self.classCount[label] / self.totalCount
 
+    # Take a test data, classify it
+    def classify(self, row):
+        res = None
+        probability = 0
+        for label in self.classes:
+            p = self.classes[label].classify(row, self.classFrequency[label])
+            if not res or p > probability:
+                res = label
+                probability = p
+        print(row[0] + " => " + str(probability) + " => " + res)
+        return res
+
+
     def getMeans(self):
         res = ""
         if self.classes:
@@ -128,16 +155,36 @@ class Classifer(object):
 class NaiveBayes(object):
     def __init__(self, inputFile, numClass, numAttributes, classIndex, numData, kFold):
         self.inputFile = inputFile
+        self.numAttributes = numAttributes
         self.classifier = Classifer(numClass, numAttributes, classIndex)
 
     def train(self):
+        self.loadTrainingData()
+        self.classifier.compute()
+
+    def loadTrainingData(self):
         file = open(self.inputFile)
         data = csv.reader(file)
 
         # Load training data
         for row in data:
             self.classifier.train(row)
-        self.classifier.compute()
+
+    def test(self):
+        self.loadTestData()
+
+    def loadTestData(self):
+        file = open(self.inputFile)
+        data = csv.reader(file)
+        totalCount = 0
+        correctCount = 0
+
+        for row in data:
+            if self.classifier.classify(row) == row[-1]:
+                correctCount += 1
+            totalCount += 1
+
+        print("correct rate = " + str(correctCount / totalCount))
 
     def __str__(self):
         return str(self.classifier)
@@ -152,6 +199,6 @@ NB.train()
 #print(NB.classifier.getMeans())
 #print(NB.classifier.getSTDs())
 
-
+NB.test()
 
 # print(GaussianPDF(9.2, 1.8, 9.9))
