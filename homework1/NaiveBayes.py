@@ -23,6 +23,12 @@ class Attribute(object):
     def add(self, value):
         self.values.append(eval(value))
 
+    def GaussianPDF(self, x):
+        base = 1.0 / math.sqrt(2 * math.pi * self.std * self.std)
+        exp = math.exp(-1.0 * (math.pow(x - self.mean, 2)) / (2 * self.std * self.std))
+        return base * exp
+
+
     def __str__(self):
         res = "["
         for value in self.values:
@@ -74,18 +80,28 @@ class Classifer(object):
         self.numAttributes = numAttributes
         self.classIndex = classIndex
         self.classes = {}
+        self.classCount = {}
+        self.totalCount = 0
+        self.classFrequency = {}
 
     # Take a training data, add it to its class
     def train(self, row):
         label = row[self.classIndex]
         if label not in self.classes:
             self.classes[label] = ClassInfo(self.numAttributes)
+            self.classCount[label] = 0
         self.classes[label].add(row)
+        self.classCount[label] += 1
+        self.totalCount += 1
 
-    # compute mean and standard deviation for each class
+    # compute mean, standard deviation and frequency for each class
     def compute(self):
         for label in self.classes:
             self.classes[label].compute()
+
+        # compute frequency estimate for each class
+        for label in self.classes:
+            self.classFrequency[label] = self.classCount[label] / self.totalCount
 
     def getMeans(self):
         res = ""
@@ -123,7 +139,6 @@ class NaiveBayes(object):
             self.classifier.train(row)
         self.classifier.compute()
 
-
     def __str__(self):
         return str(self.classifier)
 
@@ -131,16 +146,12 @@ class NaiveBayes(object):
 
 NB = NaiveBayes("glasshw1.csv", 2, 9, 10, 200, 0)
 # print(NB)
-# NB.train()
+NB.train()
 # print(NB)
 
-
 #print(NB.classifier.getMeans())
+#print(NB.classifier.getSTDs())
 
 
-# def GaussianPDF(mean, std, x):
-#     base = 1.0 / math.sqrt(2 * math.pi * std * std)
-#     exp = math.exp(-1.0 * (math.pow(x - mean, 2)) / (2 * std * std))
-#     return base * exp
-#
+
 # print(GaussianPDF(9.2, 1.8, 9.9))
