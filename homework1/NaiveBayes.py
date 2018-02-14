@@ -8,28 +8,139 @@
 import sys
 import csv
 import numpy
+import math
+
+class Attribute(object):
+    def __init__(self):
+        self.values = []
+
+    def computeMean(self):
+        self.mean = numpy.average(self.values)
+
+    def computeStandardDeviation(self):
+        self.std = numpy.std(self.values)
+
+    def add(self, value):
+        self.values.append(eval(value))
+
+    def __str__(self):
+        res = "["
+        for value in self.values:
+            res += str(value) + ","
+        res += "]"
+        return res
 
 
-data_file = "glasshw1.csv"
-file = open(data_file)
-data = csv.reader(file)
-attributes = [[] for _ in range(10)]
-averages = [0.0 for _ in range(10)]
-sds = [0.0 for _ in range(10)]
+class ClassInfo(object):
+    def __init__(self, numAttributes):
+        self.numAttributes = numAttributes
+        self.attributes = [Attribute() for _ in range(numAttributes)]
 
-for row in data:
-    for i in range(1,11):
-        value = eval(row[i])
-        attributes[i-1].append(value)
+    # Add a training example to this class
+    def add(self, row):
+        for i in range(1, self.numAttributes + 1):
+            self.attributes[i-1].add(row[i])
 
-for i in range(len(attributes)):
-    attr = attributes[i]
-    #print(attr)
-    averages[i] = numpy.average(attr)
-    sds[i] = numpy.std(attr)
+    # compute mean and standard deviation for each attributes
+    def compute(self):
+        for attribute in self.attributes:
+            attribute.computeMean()
+            attribute.computeStandardDeviation()
 
-print(averages)
-print(sds)
+    def getAttributeMean(self):
+        res = "["
+        for attribute in self.attributes:
+            res += str(attribute.mean) + ","
+        res += "]"
+        return res
+
+    def getAttributeSTD(self):
+        res = "["
+        for attribute in self.attributes:
+            res += str(attribute.std) + ","
+        res += "]"
+        return res
+
+    def __str__(self):
+        res = ""
+        for attribute in self.attributes:
+            res += str(attribute) + "\n"
+        return res
+
+
+class Classifer(object):
+    def __init__(self, numClass, numAttributes, classIndex):
+        self.numClass = numClass
+        self.numAttributes = numAttributes
+        self.classIndex = classIndex
+        self.classes = {}
+
+    # Take a training data, add it to its class
+    def train(self, row):
+        label = row[self.classIndex]
+        if label not in self.classes:
+            self.classes[label] = ClassInfo(self.numAttributes)
+        self.classes[label].add(row)
+
+    # compute mean and standard deviation for each class
+    def compute(self):
+        for label in self.classes:
+            self.classes[label].compute()
+
+    def getMeans(self):
+        res = ""
+        if self.classes:
+            for cls, classInfo in self.classes.items():
+                res += str(cls) + classInfo.getAttributeMean() + "\n"
+        return res
+
+    def getSTDs(self):
+        res = ""
+        if self.classes:
+            for cls, classInfo in self.classes.items():
+                res += str(cls) + classInfo.getAttributeSTD() + "\n"
+        return res
+
+    def __str__(self):
+        res = ""
+        if self.classes:
+            for key, value in self.classes.items():
+                res += str(key) + str(value) + "\n"
+        return res
+
+
+class NaiveBayes(object):
+    def __init__(self, inputFile, numClass, numAttributes, classIndex, numData, kFold):
+        self.inputFile = inputFile
+        self.classifier = Classifer(numClass, numAttributes, classIndex)
+
+    def train(self):
+        file = open(self.inputFile)
+        data = csv.reader(file)
+
+        # Load training data
+        for row in data:
+            self.classifier.train(row)
+        self.classifier.compute()
+
+
+    def __str__(self):
+        return str(self.classifier)
 
 
 
+NB = NaiveBayes("glasshw1.csv", 2, 9, 10, 200, 0)
+# print(NB)
+# NB.train()
+# print(NB)
+
+
+#print(NB.classifier.getMeans())
+
+
+# def GaussianPDF(mean, std, x):
+#     base = 1.0 / math.sqrt(2 * math.pi * std * std)
+#     exp = math.exp(-1.0 * (math.pow(x - mean, 2)) / (2 * std * std))
+#     return base * exp
+#
+# print(GaussianPDF(9.2, 1.8, 9.9))
