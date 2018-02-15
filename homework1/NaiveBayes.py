@@ -99,7 +99,7 @@ class ClassInfo(object):
         return res
 
 
-class Classifer(object):
+class Classifier(object):
     def __init__(self, numClass, numAttributes, classIndex):
         self.numClass = numClass
         self.numAttributes = numAttributes
@@ -169,6 +169,18 @@ class Classifer(object):
         return res
 
 
+class ClassifierZeroR(Classifier):
+    def classify(self, row):
+        res = None
+        probability = 0
+        for label in self.classFrequency:
+            p = self.classFrequency[label]
+            if not res or p > probability:
+                res = label
+                probability = p
+        print(row[0] + " => " + str(probability) + " => " + res)
+        return res
+
 class NaiveBayes(object):
     '''
         inputFile: path of input csv file
@@ -178,10 +190,13 @@ class NaiveBayes(object):
         numData: number of examples
         kFold: value of k in k-fold cross validation
     '''
-    def __init__(self, inputFile, numClass, numAttributes, classIndex, numData, kFold):
+    def __init__(self, inputFile, numClass, numAttributes, classIndex, numData, kFold, zeroR=False):
         self.inputFile = inputFile
         self.numAttributes = numAttributes
-        self.classifier = Classifer(numClass, numAttributes, classIndex)
+        if zeroR:
+            self.classifier = ClassifierZeroR(numClass, numAttributes, classIndex)
+        else:
+            self.classifier = Classifier(numClass, numAttributes, classIndex)
         self.numData = numData
         self.kFold = kFold
         if self.kFold > 1:
@@ -274,3 +289,6 @@ print(NB.classifier.getSTDs())
 
 NB5Fold = NaiveBayes("glasshw1.csv", 2, 9, 10, 200, 5)
 NB5Fold.run()
+
+zeroR = NaiveBayes("glasshw1.csv", 2, 9, 10, 200, 5, True)
+zeroR.run()
