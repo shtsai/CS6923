@@ -62,16 +62,20 @@ class ClassInfo(object):
 
     # Given a test example, compute its probability
     def classify(self, row, classFrequency):
-        probability = classFrequency
-        for i in range(1, self.numAttributes + 1):
-            value = eval(row[i])
-            probability *= self.attributes[i-1].GaussianPDF(value)
+        #probability = classFrequency
+        #for i in range(1, self.numAttributes + 1):
+        #    value = eval(row[i])
+        #    probability *= self.attributes[i-1].GaussianPDF(value)
 
         # take natural log
-        # probability = math.log(classFrequency)
-        # for i in range(1, self.numAttributes + 1):
-        #     value = eval(row[i])
-        #     probability += math.log(self.attributes[i-1].GaussianPDF(value))
+        probability = math.log(classFrequency)
+        for i in range(1, self.numAttributes + 1):
+            value = eval(row[i])
+            pdf = self.attributes[i-1].GaussianPDF(value)
+            if pdf == 0:
+                probability += -math.inf
+            else:
+                probability += math.log(pdf)
         return probability
 
     def getAttributeMean(self):
@@ -137,7 +141,6 @@ class Classifer(object):
         print(row[0] + " => " + str(probability) + " => " + res)
         return res
 
-
     def getMeans(self):
         res = ""
         if self.classes:
@@ -151,6 +154,12 @@ class Classifer(object):
             for cls, classInfo in self.classes.items():
                 res += str(cls) + classInfo.getAttributeSTD() + "\n"
         return res
+
+    def clear(self):
+        self.classes = {}
+        self.classCount = {}
+        self.totalCount = 0
+        self.classFrequency = {}
 
     def __str__(self):
         res = ""
@@ -239,6 +248,7 @@ class NaiveBayes(object):
         totalCorrectCount = 0
         totalCount = 0
         for i in range(self.kFold):
+            self.classifier.clear()
             trainingData = []
             for blockIndex in range(self.kFold):
                 if i == blockIndex:
@@ -257,10 +267,10 @@ class NaiveBayes(object):
 
 
 
-#NB = NaiveBayes("glasshw1.csv", 2, 9, 10, 200, 0)
-#NB.run()
-#print(NB.classifier.getMeans())
-#print(NB.classifier.getSTDs())
+NB = NaiveBayes("glasshw1.csv", 2, 9, 10, 200, 0)
+NB.run()
+print(NB.classifier.getMeans())
+print(NB.classifier.getSTDs())
 
 NB5Fold = NaiveBayes("glasshw1.csv", 2, 9, 10, 200, 5)
 NB5Fold.run()
