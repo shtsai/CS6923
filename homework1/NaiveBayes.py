@@ -161,38 +161,78 @@ class Classifer(object):
 
 
 class NaiveBayes(object):
+    '''
+        inputFile: path of input csv file
+        numClass: number of classes to predict
+        numAttributes: number of attributes in each example
+        classIndex: index of the class label in the data
+        numData: number of examples
+        kFold: value of k in k-fold cross validation
+    '''
     def __init__(self, inputFile, numClass, numAttributes, classIndex, numData, kFold):
         self.inputFile = inputFile
         self.numAttributes = numAttributes
         self.classifier = Classifer(numClass, numAttributes, classIndex)
+        self.numData = numData
+        self.kFold = kFold
+        if self.kFold > 1:
+            self.splitData()
 
-    def train(self):
-        self.loadTrainingData()
-        self.classifier.compute()
+    def run(self):
+        if self.kFold <= 1:
+            self.loadAllDataAsTrainingAndTest()
+            self.loadTrainingData()
+            self.classifier.compute()
+            correctCount, totalCount, correctRate = self.loadTestData()
+            print("correct rate = {0:d} / {1:d} = {2:f}".format(correctCount, totalCount, correctRate))
+        else:
+            self.runKFold()
+
+    def loadAllDataAsTrainingAndTest(self):
+        file = open(self.inputFile)
+        data = csv.reader(file)
+
+        rows = []
+        for row in data:
+            rows.append(row)
+        self.trainingData = rows
+        self.testData = rows
 
     def loadTrainingData(self):
-        file = open(self.inputFile)
-        data = csv.reader(file)
-
-        # Load training data
-        for row in data:
+        for row in self.trainingData:
             self.classifier.train(row)
 
-    def test(self):
-        self.loadTestData()
-
     def loadTestData(self):
-        file = open(self.inputFile)
-        data = csv.reader(file)
-        totalCount = 0
         correctCount = 0
-
-        for row in data:
+        totalCount = 0
+        for row in self.testData:
             if self.classifier.classify(row) == row[-1]:
                 correctCount += 1
             totalCount += 1
 
-        print("correct rate = {0:d} / {1:d} = {2:f}".format(correctCount, totalCount, correctCount / totalCount))
+        return correctCount, totalCount, correctCount / totalCount
+
+    # split data into k blocks
+    def splitData(self):
+        file = open(self.inputFile)
+        data = csv.reader(file)
+
+        dataBlocks = []
+        rowEachBlock = self.numData / self.kFold
+        count = 0
+        currentBlock =  []
+        for row in data:
+            currentBlock.append(row)
+            count += 1
+            if count == rowEachBlock:
+                dataBlocks.append(currentBlock)
+                currentBlock = []
+                count = 0
+        self.dataBlocks = dataBlocks
+
+#    def runKFold(self):
+#        for i in range(self.kFold):
+
 
     def __str__(self):
         return str(self.classifier)
@@ -200,12 +240,8 @@ class NaiveBayes(object):
 
 
 NB = NaiveBayes("glasshw1.csv", 2, 9, 10, 200, 0)
-# print(NB)
-NB.train()
-# print(NB)
-
+NB.run()
 print(NB.classifier.getMeans())
 print(NB.classifier.getSTDs())
 
-NB.test()
-
+#NB5Fold = NaiveBayes("glasshw1.csv", 2, 9, 10, 200, 5)
