@@ -7,7 +7,6 @@
 
 import sys
 import csv
-import numpy
 import math
 
 class Attribute(object):
@@ -15,10 +14,18 @@ class Attribute(object):
         self.values = []
 
     def computeMean(self):
-        self.mean = numpy.average(self.values)
+        sum = 0.0
+        for v in self.values:
+            sum += v
+        self.mean = sum / len(self.values)
 
     def computeStandardDeviation(self):
-        self.std = numpy.std(self.values)
+        self.computeMean()
+        mean = self.mean
+        res = 0.0
+        for v in self.values:
+            res += math.pow(v - mean, 2)
+        self.std = math.sqrt(res / (len(self.values) - 1))
 
     def add(self, value):
         self.values.append(eval(value))
@@ -201,4 +208,3 @@ NB.train()
 
 NB.test()
 
-# print(GaussianPDF(9.2, 1.8, 9.9))
