@@ -180,13 +180,18 @@ class NaiveBayes(object):
 
     def run(self):
         if self.kFold <= 1:
+            # run entire data as training and test
             self.loadAllDataAsTrainingAndTest()
-            self.loadTrainingData()
-            self.classifier.compute()
-            correctCount, totalCount, correctRate = self.loadTestData()
-            print("correct rate = {0:d} / {1:d} = {2:f}".format(correctCount, totalCount, correctRate))
+            correctCount, totalCount, correctRate = self.runTask()
         else:
-            self.runKFold()
+            correctCount, totalCount, correctRate = self.runKFold()
+        print("correct rate = {0:d} / {1:d} = {2:f}".format(correctCount, totalCount, correctRate))
+
+    # This function starts classification task
+    def runTask(self):
+        self.loadTrainingData()
+        self.classifier.compute()
+        return self.loadTestData()
 
     def loadAllDataAsTrainingAndTest(self):
         file = open(self.inputFile)
@@ -230,8 +235,21 @@ class NaiveBayes(object):
                 count = 0
         self.dataBlocks = dataBlocks
 
-#    def runKFold(self):
-#        for i in range(self.kFold):
+    def runKFold(self):
+        totalCorrectCount = 0
+        totalCount = 0
+        for i in range(self.kFold):
+            trainingData = []
+            for blockIndex in range(self.kFold):
+                if i == blockIndex:
+                    self.testData = self.dataBlocks[blockIndex]
+                else:
+                    trainingData.extend(self.dataBlocks[blockIndex])
+            self.trainingData = trainingData
+            correctCount, count, _ = self.runTask()
+            totalCorrectCount += correctCount
+            totalCount += count
+        return totalCorrectCount, totalCount, totalCorrectCount / totalCount
 
 
     def __str__(self):
@@ -239,9 +257,10 @@ class NaiveBayes(object):
 
 
 
-NB = NaiveBayes("glasshw1.csv", 2, 9, 10, 200, 0)
-NB.run()
-print(NB.classifier.getMeans())
-print(NB.classifier.getSTDs())
+#NB = NaiveBayes("glasshw1.csv", 2, 9, 10, 200, 0)
+#NB.run()
+#print(NB.classifier.getMeans())
+#print(NB.classifier.getSTDs())
 
-#NB5Fold = NaiveBayes("glasshw1.csv", 2, 9, 10, 200, 5)
+NB5Fold = NaiveBayes("glasshw1.csv", 2, 9, 10, 200, 5)
+NB5Fold.run()
