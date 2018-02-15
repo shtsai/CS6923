@@ -123,6 +123,7 @@ class Classifer(object):
         # compute frequency estimate for each class
         for label in self.classes:
             self.classFrequency[label] = self.classCount[label] / self.totalCount
+            print("P({0:s}) = {1:f}".format(label, self.classFrequency[label]))
 
     # Take a test data, classify it
     def classify(self, row):
@@ -191,7 +192,7 @@ class NaiveBayes(object):
                 correctCount += 1
             totalCount += 1
 
-        print("correct rate = " + str(correctCount / totalCount))
+        print("correct rate = {0:d} / {1:d} = {2:f}".format(correctCount, totalCount, correctCount / totalCount))
 
     def __str__(self):
         return str(self.classifier)
@@ -203,8 +204,8 @@ NB = NaiveBayes("glasshw1.csv", 2, 9, 10, 200, 0)
 NB.train()
 # print(NB)
 
-#print(NB.classifier.getMeans())
-#print(NB.classifier.getSTDs())
+print(NB.classifier.getMeans())
+print(NB.classifier.getSTDs())
 
 NB.test()
 
