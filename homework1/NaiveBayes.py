@@ -100,14 +100,16 @@ class ClassInfo(object):
 
 
 class Classifier(object):
-    def __init__(self, numClass, numAttributes, classIndex):
+    def __init__(self, numClass, numAttributes, classIndex, outputFile):
         self.numClass = numClass
         self.numAttributes = numAttributes
         self.classIndex = classIndex
+        self.outputFile = outputFile
         self.classes = {}
         self.classCount = {}
         self.totalCount = 0
         self.classFrequency = {}
+
 
     # Take a training data, add it to its class
     def train(self, row):
@@ -131,14 +133,17 @@ class Classifier(object):
 
     # Take a test data, classify it
     def classify(self, row):
-        res = None
-        probability = 0
-        for label in self.classes:
-            p = self.classes[label].classify(row, self.classFrequency[label])
-            if not res or p > probability:
-                res = label
-                probability = p
-        print(row[0] + " => " + str(probability) + " => " + res)
+        with open(self.outputFile, 'a', newline='') as output:
+            writer = csv.writer(output)
+            res = None
+            probability = 0
+            for label in self.classes:
+                p = self.classes[label].classify(row, self.classFrequency[label])
+                if not res or p > probability:
+                    res = label
+                    probability = p
+            print(row[0] + " => " + str(probability) + " => " + res)
+            writer.writerow([row[0], res])
         return res
 
     def getMeans(self):
@@ -171,15 +176,19 @@ class Classifier(object):
 
 class ClassifierZeroR(Classifier):
     def classify(self, row):
-        res = None
-        probability = 0
-        for label in self.classFrequency:
-            p = self.classFrequency[label]
-            if not res or p > probability:
-                res = label
-                probability = p
-        print(row[0] + " => " + str(probability) + " => " + res)
+        with open(self.outputFile, 'a', newline='') as output:
+            writer = csv.writer(output)
+            res = None
+            probability = 0
+            for label in self.classFrequency:
+                p = self.classFrequency[label]
+                if not res or p > probability:
+                    res = label
+                    probability = p
+            print(row[0] + " => " + str(probability) + " => " + res)
+            writer.writerow([row[0], res])
         return res
+
 
 class NaiveBayes(object):
     '''
@@ -190,17 +199,20 @@ class NaiveBayes(object):
         numData: number of examples
         kFold: value of k in k-fold cross validation
     '''
-    def __init__(self, inputFile, numClass, numAttributes, classIndex, numData, kFold, zeroR=False):
+    def __init__(self, inputFile, outputFile, numClass, numAttributes, classIndex, numData, kFold, zeroR=False):
         self.inputFile = inputFile
+        self.outputFile = outputFile
         self.numAttributes = numAttributes
+        self.zeroR = zeroR
         if zeroR:
-            self.classifier = ClassifierZeroR(numClass, numAttributes, classIndex)
+            self.classifier = ClassifierZeroR(numClass, numAttributes, classIndex, outputFile)
         else:
-            self.classifier = Classifier(numClass, numAttributes, classIndex)
+            self.classifier = Classifier(numClass, numAttributes, classIndex, outputFile)
         self.numData = numData
         self.kFold = kFold
         if self.kFold > 1:
             self.splitData()
+        self.writeHeader()
 
     def run(self):
         if self.kFold <= 1:
@@ -209,7 +221,8 @@ class NaiveBayes(object):
             correctCount, totalCount, correctRate = self.runTask()
         else:
             correctCount, totalCount, correctRate = self.runKFold()
-        print("correct rate = {0:d} / {1:d} = {2:f}".format(correctCount, totalCount, correctRate))
+        self.writeResult(correctCount, totalCount, correctRate)
+
 
     # This function starts classification task
     def runTask(self):
@@ -276,19 +289,41 @@ class NaiveBayes(object):
             totalCount += count
         return totalCorrectCount, totalCount, totalCorrectCount / totalCount
 
+    def writeHeader(self):
+        with open(self.outputFile, 'a', newline='') as output:
+            writer = csv.writer(output)
+            writer.writerow(["-----------------------------------"])
+            header = []
+
+            if self.zeroR:
+                header.append("Zero R Prediction")
+            else:
+                header.append("Naive Bayes Prediction")
+
+            if self.kFold > 1:
+                header.append(str(self.kFold) + "-Fold Cross Validation")
+            else:
+                header.append("Entire Dataset")
+            writer.writerow(header)
+
+    def writeResult(self, correctCount, totalCount, correctRate):
+        with open(self.outputFile, 'a', newline='') as output:
+            writer = csv.writer(output)
+            print("correct rate = {0:d} / {1:d} = {2:f}".format(correctCount, totalCount, correctRate))
+            writer.writerow(["Correct Rate", "{0:d} / {1:d} = {2:f}".format(correctCount, totalCount, correctRate)])
 
     def __str__(self):
         return str(self.classifier)
 
 
-
-NB = NaiveBayes("glasshw1.csv", 2, 9, 10, 200, 0)
+OUTPUT_FILE = "predictionshw1.csv"
+NB = NaiveBayes("glasshw1.csv", OUTPUT_FILE, 2, 9, 10, 200, 0)
 NB.run()
 print(NB.classifier.getMeans())
 print(NB.classifier.getSTDs())
 
-NB5Fold = NaiveBayes("glasshw1.csv", 2, 9, 10, 200, 5)
+NB5Fold = NaiveBayes("glasshw1.csv", OUTPUT_FILE, 2, 9, 10, 200, 5)
 NB5Fold.run()
 
-zeroR = NaiveBayes("glasshw1.csv", 2, 9, 10, 200, 5, True)
+zeroR = NaiveBayes("glasshw1.csv", OUTPUT_FILE, 2, 9, 10, 200, 5, True)
 zeroR.run()
