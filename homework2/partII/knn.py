@@ -8,6 +8,7 @@
 import matplotlib.pyplot as plt
 import csv
 import heapq
+import math
 
 class DataPoint(object):
     def __init__(self, displacement, horsepower, mpg):
@@ -23,8 +24,8 @@ class DataPoint(object):
         return "{0:f} {1:f} {2:f}".format(self.displacement, self.horsepower, self.mpg)
 
     def getEuclideanDistance(self, target):
-        return pow(self.displacement - target.displacement, 2) \
-               + pow(self.horsepower - target.horsepower, 2)
+        return math.sqrt(pow(self.displacement - target.displacement, 2) \
+               + pow(self.horsepower - target.horsepower, 2))
 
 
 class KNearestNeighbor(object):
@@ -51,6 +52,10 @@ class KNearestNeighbor(object):
 
     # Given test data point, predict its mpg value using K Nearest Neighbor algorithm
     def predict(self, testDataPoint):
+        self.getKNN(testDataPoint)
+        return self.computeAverage()
+
+    def getKNN(self, testDataPoint):
         for d in self.trainingdata:
             distance = d.getEuclideanDistance(testDataPoint)
             if len(self.heap) < self.k:
@@ -59,7 +64,8 @@ class KNearestNeighbor(object):
                 heapq.heappop(self.heap)
                 heapq.heappush(self.heap, (-distance, d))
 
-        sum = 0
+    def computeAverage(self):
+        sum = 0.0
         size = len(self.heap)
         while self.heap:
             point = heapq.heappop(self.heap)
@@ -68,7 +74,7 @@ class KNearestNeighbor(object):
         return sum / size
 
 
-class KNNExperienment(object):
+class KNNExperiment(object):
     def __init__(self, k, trainingFile, testFile):
         self.knn = KNearestNeighbor(k)
         self.trainingFile = trainingFile
@@ -99,17 +105,17 @@ class KNNExperienment(object):
 def main():
     trainingFile = "../auto_train.csv"
     testFile = "../auto_test.csv"
-    knn1 = KNNExperienment(1, trainingFile, testFile)
+    knn1 = KNNExperiment(1, trainingFile, testFile)
     knn1.train()
     knn1Err = knn1.test()
     print("K = 1, Err = {0:.2f}".format(knn1Err))
 
-    knn3 = KNNExperienment(3, trainingFile, testFile)
+    knn3 = KNNExperiment(3, trainingFile, testFile)
     knn3.train()
     knn3Err = knn3.test()
     print("K = 3, Err = {0:.2f}".format(knn3Err))
 
-    knn20 = KNNExperienment(20, trainingFile, testFile)
+    knn20 = KNNExperiment(20, trainingFile, testFile)
     knn20.train()
     knn20Err = knn20.test()
     print("K = 20, Err = {0:.2f}".format(knn20Err))
