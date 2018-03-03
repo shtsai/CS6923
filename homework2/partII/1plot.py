@@ -16,7 +16,7 @@ displacementMin = float("inf")
 mpgMax = float("-inf")
 mpgMin = float("inf")
 
-with open("auto_train.csv") as file:
+with open("../auto_train.csv") as file:
     data = csv.reader(file)
 
     # Skip header
