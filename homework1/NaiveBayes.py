@@ -7,7 +7,6 @@
 
 import sys
 import csv
-import numpy
 import math
 
 class Attribute(object):
@@ -15,10 +14,18 @@ class Attribute(object):
         self.values = []
 
     def computeMean(self):
-        self.mean = numpy.average(self.values)
+        sum = 0.0
+        for v in self.values:
+            sum += v
+        self.mean = sum / len(self.values)
 
     def computeStandardDeviation(self):
-        self.std = numpy.std(self.values)
+        self.computeMean()
+        mean = self.mean
+        res = 0.0
+        for v in self.values:
+            res += math.pow(v - mean, 2)
+        self.std = math.sqrt(res / (len(self.values) - 1))
 
     def add(self, value):
         self.values.append(eval(value))
@@ -55,16 +62,20 @@ class ClassInfo(object):
 
     # Given a test example, compute its probability
     def classify(self, row, classFrequency):
-        probability = classFrequency
-        for i in range(1, self.numAttributes + 1):
-            value = eval(row[i])
-            probability *= self.attributes[i-1].GaussianPDF(value)
+        #probability = classFrequency
+        #for i in range(1, self.numAttributes + 1):
+        #    value = eval(row[i])
+        #    probability *= self.attributes[i-1].GaussianPDF(value)
 
         # take natural log
-        # probability = math.log(classFrequency)
-        # for i in range(1, self.numAttributes + 1):
-        #     value = eval(row[i])
-        #     probability += math.log(self.attributes[i-1].GaussianPDF(value))
+        probability = math.log(classFrequency)
+        for i in range(1, self.numAttributes + 1):
+            value = eval(row[i])
+            pdf = self.attributes[i-1].GaussianPDF(value)
+            if pdf == 0:
+                probability += -math.inf
+            else:
+                probability += math.log(pdf)
         return probability
 
     def getAttributeMean(self):
@@ -88,15 +99,17 @@ class ClassInfo(object):
         return res
 
 
-class Classifer(object):
-    def __init__(self, numClass, numAttributes, classIndex):
+class Classifier(object):
+    def __init__(self, numClass, numAttributes, classIndex, outputFile):
         self.numClass = numClass
         self.numAttributes = numAttributes
         self.classIndex = classIndex
+        self.outputFile = outputFile
         self.classes = {}
         self.classCount = {}
         self.totalCount = 0
         self.classFrequency = {}
+
 
     # Take a training data, add it to its class
     def train(self, row):
@@ -116,19 +129,22 @@ class Classifer(object):
         # compute frequency estimate for each class
         for label in self.classes:
             self.classFrequency[label] = self.classCount[label] / self.totalCount
+            print("P({0:s}) = {1:f}".format(label, self.classFrequency[label]))
 
     # Take a test data, classify it
     def classify(self, row):
-        res = None
-        probability = 0
-        for label in self.classes:
-            p = self.classes[label].classify(row, self.classFrequency[label])
-            if not res or p > probability:
-                res = label
-                probability = p
-        print(row[0] + " => " + str(probability) + " => " + res)
+        with open(self.outputFile, 'a', newline='') as output:
+            writer = csv.writer(output)
+            res = None
+            probability = 0
+            for label in self.classes:
+                p = self.classes[label].classify(row, self.classFrequency[label])
+                if not res or p > probability:
+                    res = label
+                    probability = p
+            print(row[0] + " => " + str(probability) + " => " + res)
+            writer.writerow([row[0], res])
         return res
-
 
     def getMeans(self):
         res = ""
@@ -144,6 +160,12 @@ class Classifer(object):
                 res += str(cls) + classInfo.getAttributeSTD() + "\n"
         return res
 
+    def clear(self):
+        self.classes = {}
+        self.classCount = {}
+        self.totalCount = 0
+        self.classFrequency = {}
+
     def __str__(self):
         res = ""
         if self.classes:
@@ -152,53 +174,156 @@ class Classifer(object):
         return res
 
 
-class NaiveBayes(object):
-    def __init__(self, inputFile, numClass, numAttributes, classIndex, numData, kFold):
-        self.inputFile = inputFile
-        self.numAttributes = numAttributes
-        self.classifier = Classifer(numClass, numAttributes, classIndex)
+class ClassifierZeroR(Classifier):
+    def classify(self, row):
+        with open(self.outputFile, 'a', newline='') as output:
+            writer = csv.writer(output)
+            res = None
+            probability = 0
+            for label in self.classFrequency:
+                p = self.classFrequency[label]
+                if not res or p > probability:
+                    res = label
+                    probability = p
+            print(row[0] + " => " + str(probability) + " => " + res)
+            writer.writerow([row[0], res])
+        return res
 
-    def train(self):
+
+class NaiveBayes(object):
+    '''
+        inputFile: path of input csv file
+        numClass: number of classes to predict
+        numAttributes: number of attributes in each example
+        classIndex: index of the class label in the data
+        numData: number of examples
+        kFold: value of k in k-fold cross validation
+    '''
+    def __init__(self, inputFile, outputFile, numClass, numAttributes, classIndex, numData, kFold, zeroR=False):
+        self.inputFile = inputFile
+        self.outputFile = outputFile
+        self.numAttributes = numAttributes
+        self.zeroR = zeroR
+        if zeroR:
+            self.classifier = ClassifierZeroR(numClass, numAttributes, classIndex, outputFile)
+        else:
+            self.classifier = Classifier(numClass, numAttributes, classIndex, outputFile)
+        self.numData = numData
+        self.kFold = kFold
+        if self.kFold > 1:
+            self.splitData()
+        self.writeHeader()
+
+    def run(self):
+        if self.kFold <= 1:
+            # run entire data as training and test
+            self.loadAllDataAsTrainingAndTest()
+            correctCount, totalCount, correctRate = self.runTask()
+        else:
+            correctCount, totalCount, correctRate = self.runKFold()
+        self.writeResult(correctCount, totalCount, correctRate)
+
+
+    # This function starts classification task
+    def runTask(self):
         self.loadTrainingData()
         self.classifier.compute()
+        return self.loadTestData()
+
+    def loadAllDataAsTrainingAndTest(self):
+        file = open(self.inputFile)
+        data = csv.reader(file)
+
+        rows = []
+        for row in data:
+            rows.append(row)
+        self.trainingData = rows
+        self.testData = rows
 
     def loadTrainingData(self):
-        file = open(self.inputFile)
-        data = csv.reader(file)
-
-        # Load training data
-        for row in data:
+        for row in self.trainingData:
             self.classifier.train(row)
 
-    def test(self):
-        self.loadTestData()
-
     def loadTestData(self):
-        file = open(self.inputFile)
-        data = csv.reader(file)
-        totalCount = 0
         correctCount = 0
-
-        for row in data:
+        totalCount = 0
+        for row in self.testData:
             if self.classifier.classify(row) == row[-1]:
                 correctCount += 1
             totalCount += 1
 
-        print("correct rate = " + str(correctCount / totalCount))
+        return correctCount, totalCount, correctCount / totalCount
+
+    # split data into k blocks
+    def splitData(self):
+        file = open(self.inputFile)
+        data = csv.reader(file)
+
+        dataBlocks = []
+        rowEachBlock = self.numData / self.kFold
+        count = 0
+        currentBlock =  []
+        for row in data:
+            currentBlock.append(row)
+            count += 1
+            if count == rowEachBlock:
+                dataBlocks.append(currentBlock)
+                currentBlock = []
+                count = 0
+        self.dataBlocks = dataBlocks
+
+    def runKFold(self):
+        totalCorrectCount = 0
+        totalCount = 0
+        for i in range(self.kFold):
+            self.classifier.clear()
+            trainingData = []
+            for blockIndex in range(self.kFold):
+                if i == blockIndex:
+                    self.testData = self.dataBlocks[blockIndex]
+                else:
+                    trainingData.extend(self.dataBlocks[blockIndex])
+            self.trainingData = trainingData
+            correctCount, count, _ = self.runTask()
+            totalCorrectCount += correctCount
+            totalCount += count
+        return totalCorrectCount, totalCount, totalCorrectCount / totalCount
+
+    def writeHeader(self):
+        with open(self.outputFile, 'a', newline='') as output:
+            writer = csv.writer(output)
+            writer.writerow(["-----------------------------------"])
+            header = []
+
+            if self.zeroR:
+                header.append("Zero R Prediction")
+            else:
+                header.append("Naive Bayes Prediction")
+
+            if self.kFold > 1:
+                header.append(str(self.kFold) + "-Fold Cross Validation")
+            else:
+                header.append("Entire Dataset")
+            writer.writerow(header)
+
+    def writeResult(self, correctCount, totalCount, correctRate):
+        with open(self.outputFile, 'a', newline='') as output:
+            writer = csv.writer(output)
+            print("correct rate = {0:d} / {1:d} = {2:f}".format(correctCount, totalCount, correctRate))
+            writer.writerow(["Correct Rate", "{0:d} / {1:d} = {2:f}".format(correctCount, totalCount, correctRate)])
 
     def __str__(self):
         return str(self.classifier)
 
 
+OUTPUT_FILE = "predictionshw1.csv"
+NB = NaiveBayes("glasshw1.csv", OUTPUT_FILE, 2, 9, 10, 200, 0)
+NB.run()
+print(NB.classifier.getMeans())
+print(NB.classifier.getSTDs())
 
-NB = NaiveBayes("glasshw1.csv", 2, 9, 10, 200, 0)
-# print(NB)
-NB.train()
-# print(NB)
+NB5Fold = NaiveBayes("glasshw1.csv", OUTPUT_FILE, 2, 9, 10, 200, 5)
+NB5Fold.run()
 
-#print(NB.classifier.getMeans())
-#print(NB.classifier.getSTDs())
-
-NB.test()
-
-# print(GaussianPDF(9.2, 1.8, 9.9))
+zeroR = NaiveBayes("glasshw1.csv", OUTPUT_FILE, 2, 9, 10, 200, 5, True)
+zeroR.run()
