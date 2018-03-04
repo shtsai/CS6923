@@ -1,6 +1,6 @@
 #
 #   CS6923 Machine Learning
-#   Homework 2
+#   Homework 2 part II (7)
 #   Shang-Hung Tsai
 #   03/02/2018
 #
