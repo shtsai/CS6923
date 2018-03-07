@@ -9,16 +9,18 @@ import matplotlib.pyplot as plt
 import csv
 import heapq
 import math
+import random
 
 class DataPoint(object):
     def __init__(self, displacement, horsepower, mpg):
         self.displacement = displacement
         self.horsepower = horsepower
         self.mpg = mpg
+        random.seed(0)    # use the same seed for the experiment
 
+    # break tie randomly
     def __gt__(self, other):
-        return (pow(self.displacement, 2) + pow(self.horsepower, 2)) \
-               > (pow(other.displacement, 2) + pow(other.horsepower,2))
+        return random.uniform(0, 1) > 0.5
 
     def __str__(self):
         return "{0:f} {1:f} {2:f}".format(self.displacement, self.horsepower, self.mpg)
@@ -70,7 +72,6 @@ class KNearestNeighbor(object):
         while self.heap:
             point = heapq.heappop(self.heap)
             sum += point[1].mpg
-            # print(str(point[0]) + " " + str(point[1]))
         return sum / size
 
 
@@ -97,7 +98,6 @@ class KNNExperiment(object):
                 testDataPoint = DataPoint(displacement, horsepower, mpg)
                 prediction = self.knn.predict(testDataPoint)
                 err += pow(prediction - mpg, 2)
-                # print("{0:f} {1:f}".format(prediction, mpg))
         return err / 2.0
 
 
