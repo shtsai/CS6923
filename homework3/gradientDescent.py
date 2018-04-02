@@ -28,7 +28,10 @@ def update(x, learning_rate):
     return x - learning_rate * f_derivative(x)
 
 def plotFunction():
-    interval = np.arange(-2., 4., 0.01)
+#    interval = np.arange(-2., 4., 0.01)
+    interval = np.linspace(-2.0, 3.0, num=500)
+    print(interval)
+    print([f(i) for i in interval])
     plt.plot(interval, [f(i) for i in interval], linewidth=0.5)
     plt.xlabel("x")
     plt.ylabel("y")
@@ -40,18 +43,23 @@ def main():
     # 1. (b)
     print("x = -1, learning rate = 0.001, iteration = 5")
     gradientDescent(-1, 0.001, 5)
-
     print("x = -1, learning rate = 0.001, iteration = 1000")
     gradientDescent(-1, 0.001, 1000)
 
+    # 1. (c)
     print("x = 2, learning rate = 0.001, iteration = 5")
     gradientDescent(2, 0.001, 5)
-
     print("x = 2, learning rate = 0.001, iteration = 1000")
     gradientDescent(2, 0.001, 1000)
 
+    # 1. (d)
     print("x = -1, learning rate = 0.01, iteration = 1000")
     gradientDescent(-1, 0.01, 1000)
+
+    # 1. (e)
+    print("x = -1, learning rate = 0.05, iteration = 100")
+    # gradientDescent(-1, 0.05, 100)
+
 
 if __name__ == "__main__":
     main()
