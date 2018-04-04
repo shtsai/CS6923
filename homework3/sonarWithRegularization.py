@@ -25,49 +25,33 @@ class logisticRegressionForSonarWithRegularization(logisticRegressionForSonar):
             self.updateWeights()
 
     # use gradient descent to update weights of the prediction function
+    # regularized version
     def updateWeights(self):
         self.predictions = self.predict()
 
         # Update wi
         newWeights = []
+
+        # an array that contains all (r^t - y^t)
+        diff = self.data.iloc[:, -1] - self.predictions
+
         for wi in range(len(self.weights)):
-            sum = 0
-            for index, row in self.data.iterrows():
-                sum += (row.iat[-1] - self.predictions[index]) * row.iat[wi]
-            newW = self.weights[wi] + self.learningRate * (sum - self.penalty * self.weights[wi])
+            sum = np.sum(diff * self.data.iloc[:,wi]) - self.penalty * self.weights[wi]
+            newW = self.weights[wi] + self.learningRate * sum
             newWeights.append(newW)
+
         self.weights = newWeights
 
         # Update w0
-        sum = 0
-        for index, row in self.data.iterrows():
-            sum += (row.iat[-1] - self.predictions[index])
-        self.weight0 += self.learningRate * sum
+        self.weight0 += self.learningRate * np.sum(diff)
 
         self.crossEntropies.append(self.crossEntropy())
 
+    # Compute the regularized version of the cross-entropy error
     def crossEntropy(self):
-        result = 0.0
-
-        for index, row in self.data.iterrows():
-            # check the label of the data
-            if row.iat[-1] == 0.0:
-                y = 1 - self.predictions[index]
-            else:
-                y = self.predictions[index]
-
-            # replace y with e^(-16) if y is too small
-            if y < math.exp(-16):
-                y = math.exp(-16)
-
-            result += math.log(y)
-
-        regularizedTerm = 0.0
-        for wi in self.weights:
-            regularizedTerm += wi * wi
-        regularizedTerm *= self.penalty / 2.0
-
-        return regularizedTerm - result
+        original= super(logisticRegressionForSonarWithRegularization, self).crossEntropy()
+        regularizedTerm = self.penalty / 2.0 * np.sum(np.dot(self.weights, self.weights))
+        return original + regularizedTerm
 
     def getSummary(self):
         print("------------------------------------------------")
@@ -78,7 +62,7 @@ class logisticRegressionForSonarWithRegularization(logisticRegressionForSonar):
 
 def main():
     sonarRegularized = logisticRegressionForSonarWithRegularization()
-    for penalty in (0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5):
+    for penalty in [0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]:
         sonarRegularized.setParams(50, 0.1, penalty)
         sonarRegularized.train()
         sonarRegularized.getSummary()
