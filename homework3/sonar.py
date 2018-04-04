@@ -6,10 +6,9 @@
 #
 
 import matplotlib.pyplot as plt
-import csv
-import heapq
 import math
 import pandas as pd
+import numpy as np
 
 class logisticRegressionForSonar(object):
     def __init__(self):
@@ -49,19 +48,25 @@ class logisticRegressionForSonar(object):
 
         # Update wi
         newWeights = []
+
+        # an array that contains all (r^t - y^t)
+        diff = self.data.iloc[:, -1] - self.predictions
+
         for wi in range(len(self.weights)):
-            sum = 0
-            for index, row in self.data.iterrows():
-                sum += (row.iat[-1] - self.predictions[index]) * row.iat[wi]
+            # sum = 0
+            # for index, row in self.data.iterrows():
+            #     sum += (row.iat[-1] - self.predictions[index]) * row.iat[wi]
+
+            sum = np.sum(diff * self.data.iloc[:,wi])
             newW = self.weights[wi] + self.learningRate * sum
             newWeights.append(newW)
         self.weights = newWeights
 
         # Update w0
-        sum = 0
-        for index, row in self.data.iterrows():
-            sum += (row.iat[-1] - self.predictions[index])
-        self.weight0 += self.learningRate * sum
+        # sum = 0
+        # for index, row in self.data.iterrows():
+        #     sum += (row.iat[-1] - self.predictions[index])
+        self.weight0 += self.learningRate * np.sum(diff)
 
         self.crossEntropies.append(self.crossEntropy())
 
@@ -69,10 +74,22 @@ class logisticRegressionForSonar(object):
     def predict(self):
         results = []
         for index, row in self.data.iterrows():
-            prediction = self.weight0
-            for i in range(len(self.weights)):
-                prediction += self.weights[i] * row[i]
+            # prediction = self.weight0
+            # for i in range(len(self.weights)):
+            #     prediction += self.weights[i] * row[i]
+            # print("prediction 1 = " + str(prediction))
+
+            prediction = self.weight0 + np.dot(self.weights, row[:-1])
+
+            # The value of prediction might overflow
+            try:
+                prediction = 1.0 / (1.0 + math.exp(-prediction))
+            except OverflowError:
+                prediction = 0.0
+
             results.append(prediction)
+
+        # print(results)
 
         return results
 
@@ -102,20 +119,18 @@ class logisticRegressionForSonar(object):
         error = 0
 
         for index, row in self.data.iterrows():
-            if self.predictions[index] > 0:
-                p = 1
+            if self.predictions[index] > 0.5:
+                prediction = 1
             else:
-                p = 0
-            if p != row.iat[-1]:
+                prediction = 0
+            if prediction != row.iat[-1]:
                 error += 1
 
         return error / self.data.shape[0]
 
+    # compute the value of L2 norm of w
     def l2norm(self):
-        result = 0.0
-        for wi in self.weights:
-            result += wi * wi
-        return math.sqrt(result)
+        return math.sqrt(np.sum(np.dot(self.weights, self.weights)))
 
     def getSummary(self):
         print("------------------------------------------------")
@@ -125,32 +140,21 @@ class logisticRegressionForSonar(object):
         print("||w||2 = {0:f}".format(self.l2norm()))
 
 def main():
-    sonar = logisticRegressionForSonar()
-    for eta in (0.001, 0.01, 0.05, 0.1, 0.5, 1.0, 1.5):
+    for eta in [0.001, 0.01, 0.05, 0.1, 0.5, 1.0, 1.5]:
+    # for eta in [0.001, 1.5]:
+        sonar = logisticRegressionForSonar()
         sonar.setParams(50, eta)
         sonar.train()
         sonar.getSummary()
         i, c = sonar.getIterationAndCrossEntropy()
-        plt.plot(i, c)
-    # sonar.setParams(50, 0.001)
-    # sonar.train()
-    # i1, c1 = sonar.getIterationAndCrossEntropy()
-    # plt.plot(i1, c1, linewidth=0.5)
-
-    # sonar.setParams(50, 0.01)
-    # sonar.train()
-    # i2, c2 = sonar.getIterationAndCrossEntropy()
-    # print(i2)
-    # print(c2)
-    # plt.plot(i2, c2)
+        plt.plot(i, c, label=str(eta))
 
     plt.xlabel("Iteration")
     plt.ylabel("Cross-entropy")
+    plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=4, mode="expand", borderaxespad=0.)
     plt.show()
 
-    #
-    # sonar.setParams(50, 0.05)
-    # sonar.train()
 
 if __name__ == "__main__":
     main()
+
