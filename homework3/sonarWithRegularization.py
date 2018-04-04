@@ -14,11 +14,15 @@ class logisticRegressionForSonarWithRegularization(logisticRegressionForSonar):
         self.learningRate = learningRate
         self.penalty = penalty
 
+    def trainAll(self):
+        self.data = self.originaldata
+        self.train()
+
+    def train(self):
         # Initialize all weights to be equal to 0.5
         self.weights = [0.5 for _ in range(self.data.shape[1] - 1)]
         self.weight0 = 0.5
 
-    def train(self):
         self.predictions = self.predict()
         for i in range(self.iterations):
             self.updateWeights()
@@ -51,19 +55,84 @@ class logisticRegressionForSonarWithRegularization(logisticRegressionForSonar):
         # print("regularized term = " + str(regularizedTerm))
         return original + regularizedTerm
 
+
+    # perform k-fold cross validation
+    def crossValidation(self, k):
+        self.splitData(k)
+        self.errorCount = 0
+        for i in range(k):
+            trainingData = []
+            for bi in range(k):
+                if bi == i:
+                    testData = self.dataBlocks[bi]
+                else:
+                    trainingData.append(self.dataBlocks[bi])
+
+            # load training data
+            self.data = pd.concat(trainingData)
+            self.train()
+            self.test(testData)
+
+        return self.errorCount / self.originaldata.shape[0]
+
+    def test(self, testData):
+        testPrediction = self.predictTestData(testData)
+
+        # count the number of errors
+        index = 0
+        for _, row in testData.iterrows():
+            # make prediction
+            if testPrediction[index] > 0.5:
+                p = 1
+            else:
+                p = 0
+
+            if p != row.iat[-1]:
+                self.errorCount += 1
+
+            index += 1
+
+    def predictTestData(self, testData):
+        results = []
+        for index, row in testData.iterrows():
+            prediction = self.weight0 + np.dot(self.weights, row[:-1])
+
+            # The value of prediction might overflow
+            try:
+                prediction = 1.0 / (1.0 + math.exp(-prediction))
+            except OverflowError:
+                prediction = 0.0
+
+            results.append(prediction)
+        return results
+
+
+    # split data into k blocks
+    def splitData(self, k):
+        dataBlocks = []
+        rowEachBlock = int(self.originaldata.shape[0] / k)
+
+        for i in range(k):
+            currentBlock = self.originaldata.iloc[i * rowEachBlock : (i + 1) * rowEachBlock]
+            dataBlocks.append(currentBlock)
+        self.dataBlocks = dataBlocks
+
     def getSummary(self):
         print("------------------------------------------------")
         print("Penalty = {0:f}".format(self.penalty))
         print("Cross-entropy error = {0:f}".format(self.crossEntropy()))
         print("Classification error = {0:f}".format(self.classificationError()))
         print("||w||2 = {0:f}".format(self.l2norm()))
+        print("Classification error (cross-validation) = {0:f}".format(self.crossValidation(5)))
 
 def main():
     sonarRegularized = logisticRegressionForSonarWithRegularization()
+
     for penalty in [0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]:
         sonarRegularized.setParams(50, 0.1, penalty)
-        sonarRegularized.train()
+        sonarRegularized.trainAll()
         sonarRegularized.getSummary()
+
 
 if __name__ == "__main__":
     main()
