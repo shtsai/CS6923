@@ -17,18 +17,15 @@ class logisticRegressionForSonarWithRegularization(logisticRegressionForSonar):
         # Initialize all weights to be equal to 0.5
         self.weights = [0.5 for _ in range(self.data.shape[1] - 1)]
         self.weight0 = 0.5
-        self.crossEntropies = []
 
     def train(self):
-        self.crossEntropies = []
+        self.predictions = self.predict()
         for i in range(self.iterations):
             self.updateWeights()
 
     # use gradient descent to update weights of the prediction function
     # regularized version
     def updateWeights(self):
-        self.predictions = self.predict()
-
         # Update wi
         newWeights = []
 
@@ -44,13 +41,14 @@ class logisticRegressionForSonarWithRegularization(logisticRegressionForSonar):
 
         # Update w0
         self.weight0 += self.learningRate * np.sum(diff)
-
-        self.crossEntropies.append(self.crossEntropy())
+        self.predictions = self.predict()
 
     # Compute the regularized version of the cross-entropy error
     def crossEntropy(self):
         original= super(logisticRegressionForSonarWithRegularization, self).crossEntropy()
-        regularizedTerm = self.penalty / 2.0 * np.sum(np.dot(self.weights, self.weights))
+        regularizedTerm = (self.penalty / 2.0) * np.sum(np.dot(self.weights, self.weights))
+        # print("original = " + str(original))
+        # print("regularized term = " + str(regularizedTerm))
         return original + regularizedTerm
 
     def getSummary(self):

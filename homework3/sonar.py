@@ -39,46 +39,14 @@ class logisticRegressionForSonar(object):
 
     def train(self):
         self.crossEntropies = []
+        self.predictions = self.predict()
         for i in range(self.iterations):
             self.updateWeights()
-
-    # use gradient descent to update weights of the prediction function
-    def updateWeights(self):
-        self.predictions = self.predict()
-
-        # Update wi
-        newWeights = []
-
-        # an array that contains all (r^t - y^t)
-        diff = self.data.iloc[:, -1] - self.predictions
-
-        for wi in range(len(self.weights)):
-            # sum = 0
-            # for index, row in self.data.iterrows():
-            #     sum += (row.iat[-1] - self.predictions[index]) * row.iat[wi]
-
-            sum = np.sum(diff * self.data.iloc[:,wi])
-            newW = self.weights[wi] + self.learningRate * sum
-            newWeights.append(newW)
-        self.weights = newWeights
-
-        # Update w0
-        # sum = 0
-        # for index, row in self.data.iterrows():
-        #     sum += (row.iat[-1] - self.predictions[index])
-        self.weight0 += self.learningRate * np.sum(diff)
-
-        self.crossEntropies.append(self.crossEntropy())
 
     # Make predictions on the data based on the current weights
     def predict(self):
         results = []
         for index, row in self.data.iterrows():
-            # prediction = self.weight0
-            # for i in range(len(self.weights)):
-            #     prediction += self.weights[i] * row[i]
-            # print("prediction 1 = " + str(prediction))
-
             prediction = self.weight0 + np.dot(self.weights, row[:-1])
 
             # The value of prediction might overflow
@@ -89,9 +57,28 @@ class logisticRegressionForSonar(object):
 
             results.append(prediction)
 
-        # print(results)
-
         return results
+
+    # use gradient descent to update weights of the prediction function
+    def updateWeights(self):
+        # Update wi
+        newWeights = []
+
+        # an array that contains all (r^t - y^t)
+        diff = self.data.iloc[:, -1] - self.predictions
+
+        for wi in range(len(self.weights)):
+            sum = np.sum(diff * self.data.iloc[:,wi])
+            newW = self.weights[wi] + self.learningRate * sum
+            newWeights.append(newW)
+        self.weights = newWeights
+
+        # Update w0
+        self.weight0 += self.learningRate * np.sum(diff)
+
+        # Update predictions
+        self.predictions = self.predict()
+        self.crossEntropies.append(self.crossEntropy())
 
     def crossEntropy(self):
         result = 0.0
