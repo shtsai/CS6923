@@ -119,7 +119,8 @@ class logisticRegressionForSonarWithRegularization(logisticRegressionForSonar):
 
     def getSummary(self):
         print("------------------------------------------------")
-        print("Penalty = {0:f}".format(self.penalty))
+        print("penalty = {0:f}".format(self.penalty))
+        print("Learning rate = {0:f}".format(self.learningRate))
         print("Cross-entropy error = {0:f}".format(self.crossEntropy()))
         print("Classification error = {0:f}".format(self.classificationError()))
         print("||w||2 = {0:f}".format(self.l2norm()))
@@ -129,7 +130,7 @@ def main():
     sonarRegularized = logisticRegressionForSonarWithRegularization()
 
     for penalty in [0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]:
-        sonarRegularized.setParams(50, 0.1, penalty)
+        sonarRegularized.setParams(50, 0.001, penalty)
         sonarRegularized.trainAll()
         sonarRegularized.getSummary()
 
