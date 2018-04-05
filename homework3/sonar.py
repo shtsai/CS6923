@@ -12,17 +12,14 @@ import numpy as np
 
 class logisticRegressionForSonar(object):
     def __init__(self):
-        self.data = self.loadData()
+        self.originaldata = self.loadData()
+        self.data = self.originaldata
 
     # set number of iterations and the learning rate
     def setParams(self, iterations, learningRate):
         self.iterations = iterations
         self.learningRate = learningRate
 
-        # Initialize all weights to be equal to 0.5
-        self.weights = [0.5 for _ in range(self.data.shape[1] - 1)]
-        self.weight0 = 0.5
-        self.crossEntropies = []
 
     def loadData(self):
         datafile = "sonar.csv"
@@ -38,8 +35,12 @@ class logisticRegressionForSonar(object):
         return data
 
     def train(self):
-        self.crossEntropies = []
+        # Initialize all weights to be equal to 0.5
+        self.weights = [0.5 for _ in range(self.data.shape[1] - 1)]
+        self.weight0 = 0.5
+
         self.predictions = self.predict()
+        self.crossEntropies = [self.crossEntropy()]
         for i in range(self.iterations):
             self.updateWeights()
 
@@ -99,7 +100,7 @@ class logisticRegressionForSonar(object):
         return -result
 
     def getIterationAndCrossEntropy(self):
-        return [i for i in range(1, self.iterations + 1)], self.crossEntropies
+        return [i for i in range(0, self.iterations + 1)], self.crossEntropies
 
     # Compute the percentage of training examples that are misclassified
     def classificationError(self):
