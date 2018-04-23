@@ -36,6 +36,7 @@ def bp(I,D,n_hidden,eta,n_max):
             #if n == 4999:
             #    print("y%d = %f"%(k+1, y))
 
+
             err = (D[k,:] - y).reshape([1,-1])
             sq_err_sum += 0.5*np.square(err)
             
@@ -53,9 +54,16 @@ def bp(I,D,n_hidden,eta,n_max):
             wb += eta*Delta_wb
 
             err_curve[n] = sq_err_sum/n_examples
-    
+
         print('epoch %d: err %f'%(n,np.mean(sq_err_sum)/n_examples))
-    
+
+        #For (ii)
+        if n == 9999:
+            input = np.array([1, 0, 1, 0, 1, 0, 1, 0]).reshape([1,-1])
+            newz = sigmoid(input.dot(w)+wb)
+            newy = sigmoid(newz.dot(v)+vb)
+            print(newy)
+
     plt.plot(np.linspace(0,n_max-1,n_max),np.mean(err_curve,axis=1))
     #plt.show()
     return w,wb,v,vb,err_curve     
@@ -66,9 +74,10 @@ def bp(I,D,n_hidden,eta,n_max):
 #w,wb,v,vb,err_curve = bp(np.array([[0,0],[0,1],[1,0],[1,1]]), np.array([0,1,1,0]).reshape([-1,1]), 2, 4.5, 5000);
 #    
 #2. autoassociation
-#w,wb,v,vb,err_curve = bp(np.eye(8,8), np.eye(8,8), 3, 5.0, 10000)
+w,wb,v,vb,err_curve = bp(np.eye(8,8), np.eye(8,8), 3, 5.0, 10000)
 #    
 #3. function approximation
-x = np.arange(-np.pi,np.pi,0.1)
-fx = (np.cos(x)+1)/2
-w,wb,v,vb,err_curve = bp((x/np.pi).reshape([-1,1]),fx.reshape([-1,1]), 4, 2.0,4000);
+#x = np.arange(-np.pi,np.pi,0.1)
+#fx = (np.cos(x)+1)/2
+#fx = np.cos(x)
+#w,wb,v,vb,err_curve = bp((x/np.pi).reshape([-1,1]),fx.reshape([-1,1]), 4, 2.0,4000);
