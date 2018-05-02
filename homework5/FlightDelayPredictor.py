@@ -1,5 +1,7 @@
 import sys
 import pandas as pd
+import numpy as np
+from sklearn.linear_model import Ridge, RidgeCV
 
 def extract_month(row):
     '''Extract month from FL_DATE'''
@@ -35,14 +37,11 @@ def one_hot_encode(df, column):
     df = df.join(one_hot)
     return df, values
 
-def main():
-    # Read training and testing data
-    training_file = sys.argv[1]
-    testing_file = sys.argv[2]
-    training = pd.read_csv(training_file)
-    testing = pd.read_csv(testing_file)
+def preprocess(training, testing):
+    '''Proprocess training and testing data, so that they have the same schema'''
+    # extract labels
+    labels = training["ARR_DELAY"]
 
-    # PREPROCESSING TRAINING DATA
     # extract month and day
     training["MONTH"] = training.apply(extract_month, axis=1)
     training["DAY"] = training.apply(extract_day, axis=1)
@@ -66,7 +65,7 @@ def main():
                                       "CARRIER", "FL_NUM", "ORIGIN_CITY_MARKET_ID",
                                       "ORIGIN", "ORIGIN_CITY_NAME", "ORIGIN_STATE_ABR", "DEST_CITY_MARKET_ID",
                                       "DEST", "DEST_CITY_NAME", "DEST_STATE_ABR", "CRS_DEP_TIME", "DISTANCE_GROUP",
-                                      "FIRST_DEP_TIME"])
+                                      "FIRST_DEP_TIME", "ARR_DELAY"])
 
     # PREPROCESSING TESTING DATA
     # extract month and day
@@ -99,6 +98,41 @@ def main():
     training, testing = training.align(testing, join='outer', axis=1, fill_value=0)
     training = training[cols]
     testing = testing[cols]
+
+    return training, labels, testing
+
+def error(x, y):
+    N = len(x)
+    return np.sum(np.square(x - y)) / N
+
+def ridge_predict(training, labels, testing):
+    # First perform cross-validation to find the best value for alpha
+    ridgeCV = RidgeCV(alphas=[0.1, 0.2, 0.5, 1.0, 2.0, 4.0, 6.0, 8.0, 10.0])
+    ridgeCV.fit(training, labels)
+    print("Ridge regression: alpha = {0:f}".format(ridgeCV.alpha_))
+
+    # Then perform ridge regression
+    ridge = Ridge(alpha=ridgeCV.alpha_)
+    ridge.fit(training, labels)
+    return ridge.predict(training)
+
+def main():
+    # Read training and testing data
+    training_file = sys.argv[1]
+    testing_file = sys.argv[2]
+    training = pd.read_csv(training_file)
+    testing = pd.read_csv(testing_file)
+
+    # preprocess training data
+    training, labels, testing = preprocess(training, testing)
+
+    # Ridge Regression
+    ridge_prediction = ridge_predict(training, labels, testing)
+    ridge_error = error(ridge_prediction, labels)
+    print(ridge_error)
+
+
+
 
 
 if __name__ == "__main__":
