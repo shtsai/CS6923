@@ -1,7 +1,10 @@
 import sys
 import pandas as pd
 import numpy as np
+from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import Ridge, RidgeCV
+from sklearn.neural_network import MLPRegressor
+from sklearn.model_selection import KFold
 
 def extract_month(row):
     '''Extract month from FL_DATE'''
@@ -37,6 +40,14 @@ def one_hot_encode(df, column):
     df = df.join(one_hot)
     return df, values
 
+def standardize_feature(training, testing, column):
+    '''Standardize features by removing the mean and scaling to unit variance'''
+    scaler = StandardScaler()
+    scaler.fit(training[column].values.reshape(-1, 1))
+    training[column] = scaler.transform(training[column].values.reshape(-1, 1))
+    testing[column] = scaler.transform(testing[column].values.reshape(-1, 1))
+    return training, testing
+
 def preprocess(training, testing):
     '''Proprocess training and testing data, so that they have the same schema'''
     # extract labels
@@ -56,6 +67,7 @@ def preprocess(training, testing):
     training, ORIGIN = one_hot_encode(training, "ORIGIN")
     training, DEST = one_hot_encode(training, "DEST")
 
+
     # clean DISTANCE add SPEED attribute
     training["DISTANCE"] = training.apply(clean_column("DISTANCE"), axis=1)
     training["SPEED"] = training.apply(compute_speed, axis=1)
@@ -65,7 +77,7 @@ def preprocess(training, testing):
                                       "CARRIER", "FL_NUM", "ORIGIN_CITY_MARKET_ID",
                                       "ORIGIN", "ORIGIN_CITY_NAME", "ORIGIN_STATE_ABR", "DEST_CITY_MARKET_ID",
                                       "DEST", "DEST_CITY_NAME", "DEST_STATE_ABR", "CRS_DEP_TIME", "DISTANCE_GROUP",
-                                      "FIRST_DEP_TIME", "ARR_DELAY"])
+                                      "FIRST_DEP_TIME", "ARR_DELAY", "UID"])
 
     # PREPROCESSING TESTING DATA
     # extract month and day
@@ -91,13 +103,19 @@ def preprocess(training, testing):
                                       "CARRIER", "FL_NUM", "ORIGIN_CITY_MARKET_ID",
                                       "ORIGIN", "ORIGIN_CITY_NAME", "ORIGIN_STATE_ABR", "DEST_CITY_MARKET_ID",
                                       "DEST", "DEST_CITY_NAME", "DEST_STATE_ABR", "CRS_DEP_TIME", "DISTANCE_GROUP",
-                                      "FIRST_DEP_TIME"])
+                                      "FIRST_DEP_TIME", "UID"])
 
     cols = training.columns
-    ## TODO need to seperate ARR_DELAY from training
     training, testing = training.align(testing, join='outer', axis=1, fill_value=0)
     training = training[cols]
     testing = testing[cols]
+
+    # standardize features by removing the mean and scaling to unit variance
+    training, testing = standardize_feature(training, testing, "TAXI_OUT")
+    training, testing = standardize_feature(training, testing, "TAXI_IN")
+    training, testing = standardize_feature(training, testing, "ACTUAL_ELAPSED_TIME")
+    training, testing = standardize_feature(training, testing, "DISTANCE")
+    training, testing = standardize_feature(training, testing, "SPEED")
 
     return training, labels, testing
 
@@ -114,7 +132,58 @@ def ridge_predict(training, labels, testing):
     # Then perform ridge regression
     ridge = Ridge(alpha=ridgeCV.alpha_)
     ridge.fit(training, labels)
-    return ridge.predict(training)
+    return ridge.predict(training), ridge.predict(testing)
+
+def nn_kfold_CV(training, labels):
+    kf = KFold(n_splits=10, shuffle=True)
+
+    nns = []
+    # nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='logistic', solver='adam', max_iter=100000,
+    #                         early_stopping=True))
+    # nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='logistic', solver='sgd', max_iter=100000,
+    #                         early_stopping=True))
+    # nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='relu', solver='adam', max_iter=100000,
+    #                         early_stopping=True))
+    # nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='relu', solver='sgd', max_iter=100000,
+    #                         early_stopping=True))
+    # nns.append(MLPRegressor(hidden_layer_sizes=(5000, 2048, 512, 128, 1), activation='logistic', solver='adam',
+    #                         max_iter=100000, early_stopping=True))
+    # nns.append(MLPRegressor(hidden_layer_sizes=(5000, 2048, 512, 128, 1), activation='logistic', solver='sgd',
+    #                         max_iter=100000, early_stopping=True))
+    # nns.append(MLPRegressor(hidden_layer_sizes=(5000, 2048, 512, 128, 1), activation='relu', solver='adam',
+    #                         max_iter=100000, early_stopping=True))
+    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 2048, 512, 128, 1), activation='relu', solver='sgd',
+                            max_iter=100000, early_stopping=True))
+
+    min_error = float("inf")
+    best_nn = None
+
+    for nn in nns:
+        nn_error = 0.0
+        for tr_index, te_index in kf.split(training):
+            kf_training = training.iloc[tr_index]
+            kf_labels = labels.iloc[tr_index]
+            kf_testing = training.iloc[te_index]
+            kf_testing_labels = labels.iloc[te_index]
+
+            nn.fit(kf_training, kf_labels)
+            nn_prediction = nn.predict(kf_testing)
+            nn_error += error(nn_prediction, kf_testing_labels)
+        nn_error /= kf.n_splits
+        print(nn)
+        print(nn_error)
+        if nn_error < min_error:
+            min_error = nn_error
+            best_nn = nn
+    return best_nn
+
+
+def neural_net_predict(training, labels, testing):
+    nn = MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='relu', solver='adam', max_iter=100000,
+                      early_stopping=True)
+    nn.fit(training, labels)
+    print("Neural Net Regression")
+    return nn.predict(training), nn.predict(testing)
 
 def main():
     # Read training and testing data
@@ -124,14 +193,21 @@ def main():
     testing = pd.read_csv(testing_file)
 
     # preprocess training data
+    training_id = training["UID"]
+    testing_id = testing["UID"]
     training, labels, testing = preprocess(training, testing)
 
     # Ridge Regression
-    ridge_prediction = ridge_predict(training, labels, testing)
-    ridge_error = error(ridge_prediction, labels)
+    ridge_training_prediction, ridge_testing_prediction = ridge_predict(training, labels, testing)
+    ridge_error = error(ridge_training_prediction, labels)
     print(ridge_error)
 
-
+    # Neural Net Regression
+    print(nn_kfold_CV(training, labels))
+    # nn_training_prediction, nn_testing_prediction = neural_net_predict(training, labels, testing)
+    # print(nn_training_prediction)
+    # nn_error = error(nn_training_prediction, labels)
+    # print(nn_error)
 
 
 
