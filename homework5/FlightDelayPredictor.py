@@ -21,13 +21,6 @@ def extract_hour(row):
     hour = row["CRS_DEP_TIME"] // 100
     return hour
 
-def clean_column(column):
-    '''Remove special characters in the given column'''
-    def _clean_column(row):
-        '''Actual function to clean column'''
-        return int(row[column].replace(',', ''))
-    return _clean_column
-
 def compute_speed(row):
     '''Compute average speed of the flight'''
     speed = row["DISTANCE"] / row["ACTUAL_ELAPSED_TIME"]
@@ -69,12 +62,11 @@ def preprocess(training, testing):
 
 
     # clean DISTANCE add SPEED attribute
-    training["DISTANCE"] = training.apply(clean_column("DISTANCE"), axis=1)
     training["SPEED"] = training.apply(compute_speed, axis=1)
 
     # drop unneeded attributes
     training = training.drop(columns=["DAY_OF_WEEK", "FL_DATE", "MONTH", "DAY", "HOUR","AIRLINE_ID",
-                                      "CARRIER", "FL_NUM", "ORIGIN_CITY_MARKET_ID",
+                                      "UNIQUE_CARRIER", "FL_NUM", "ORIGIN_CITY_MARKET_ID",
                                       "ORIGIN", "ORIGIN_CITY_NAME", "ORIGIN_STATE_ABR", "DEST_CITY_MARKET_ID",
                                       "DEST", "DEST_CITY_NAME", "DEST_STATE_ABR", "CRS_DEP_TIME", "DISTANCE_GROUP",
                                       "FIRST_DEP_TIME", "ARR_DELAY", "UID"])
@@ -95,12 +87,11 @@ def preprocess(training, testing):
     testing, DEST = one_hot_encode(testing, "DEST")
 
     # clean DISTANCE add SPEED attribute
-    testing["DISTANCE"] = testing.apply(clean_column("DISTANCE"), axis=1)
     testing["SPEED"] = testing.apply(compute_speed, axis=1)
 
     # drop unneeded attributes
     testing = testing.drop(columns=["DAY_OF_WEEK", "FL_DATE", "MONTH", "DAY", "HOUR","AIRLINE_ID",
-                                      "CARRIER", "FL_NUM", "ORIGIN_CITY_MARKET_ID",
+                                      "UNIQUE_CARRIER", "FL_NUM", "ORIGIN_CITY_MARKET_ID",
                                       "ORIGIN", "ORIGIN_CITY_NAME", "ORIGIN_STATE_ABR", "DEST_CITY_MARKET_ID",
                                       "DEST", "DEST_CITY_NAME", "DEST_STATE_ABR", "CRS_DEP_TIME", "DISTANCE_GROUP",
                                       "FIRST_DEP_TIME", "UID"])
@@ -267,9 +258,9 @@ def main():
     training, labels, testing = preprocess(training, testing)
 
     # Ridge Regression
-    #ridge_training_prediction, ridge_testing_prediction = ridge_predict(training, labels, testing)
-    #ridge_error = error(ridge_training_prediction, labels)
-    #print(ridge_error)
+    ridge_training_prediction, ridge_testing_prediction = ridge_predict(training, labels, testing)
+    ridge_error = error(ridge_training_prediction, labels)
+    print(ridge_error)
 
     # Neural Net Regression
     nn_training_prediction, nn_testing_prediction = neural_net_predict(training, labels, testing)
