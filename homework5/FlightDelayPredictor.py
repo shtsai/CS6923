@@ -165,21 +165,55 @@ def nn_10fold_CV(training, labels):
 
     nns = []
     nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='logistic', solver='adam', max_iter=100000,
-                            early_stopping=True))
+                            early_stopping=True, learning_rate_init=0.01))
     nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='logistic', solver='sgd', max_iter=100000,
-                            early_stopping=True))
+                            early_stopping=True, learning_rate='adaptive', learning_rate_init=0.01))
     nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='relu', solver='adam', max_iter=100000,
-                            early_stopping=True))
+                            early_stopping=True, learning_rate_init=0.01))
     nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='relu', solver='sgd', max_iter=100000,
-                            early_stopping=True))
-    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 2048, 512, 128, 1), activation='logistic', solver='adam',
-                            max_iter=100000, early_stopping=True))
-    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 2048, 512, 128, 1), activation='logistic', solver='sgd',
-                            max_iter=100000, early_stopping=True))
-    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 2048, 512, 128, 1), activation='relu', solver='adam',
-                            max_iter=100000, early_stopping=True))
-    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 2048, 512, 128, 1), activation='relu', solver='sgd',
-                            max_iter=100000, early_stopping=True))
+                            early_stopping=True, learning_rate='adaptive', learning_rate_init=0.01))
+    nns.append(MLPRegressor(hidden_layer_sizes=(4096, 1024, 256, 1), activation='logistic', solver='adam',
+                            max_iter=100000, early_stopping=True, learning_rate_init=0.01))
+    nns.append(MLPRegressor(hidden_layer_sizes=(4096, 1024, 256, 1), activation='logistic', solver='sgd',
+                            max_iter=100000, early_stopping=True, learning_rate='adaptive',learning_rate_init=0.01))
+    nns.append(MLPRegressor(hidden_layer_sizes=(4096, 1024, 256, 1), activation='relu', solver='adam',
+                            max_iter=100000, early_stopping=True, learning_rate_init=0.01))
+    nns.append(MLPRegressor(hidden_layer_sizes=(4096, 1024, 256, 1), activation='relu', solver='sgd',
+                            max_iter=100000, early_stopping=True, learning_rate='adaptive',learning_rate_init=0.01))
+
+    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='logistic', solver='adam', max_iter=100000,
+                            early_stopping=True, learning_rate_init=0.1))
+    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='logistic', solver='sgd', max_iter=100000,
+                            early_stopping=True, learning_rate='adaptive', learning_rate_init=0.1))
+    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='relu', solver='adam', max_iter=100000,
+                            early_stopping=True, learning_rate_init=0.1))
+    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='relu', solver='sgd', max_iter=100000,
+                            early_stopping=True, learning_rate='adaptive', learning_rate_init=0.1))
+    nns.append(MLPRegressor(hidden_layer_sizes=(4096, 1024, 256, 1), activation='logistic', solver='adam',
+                            max_iter=100000, early_stopping=True, learning_rate_init=0.1))
+    nns.append(MLPRegressor(hidden_layer_sizes=(4096, 1024, 256, 1), activation='logistic', solver='sgd',
+                            max_iter=100000, early_stopping=True, learning_rate='adaptive',learning_rate_init=0.1))
+    nns.append(MLPRegressor(hidden_layer_sizes=(4096, 1024, 256, 1), activation='relu', solver='adam',
+                            max_iter=100000, early_stopping=True, learning_rate_init=0.1))
+    nns.append(MLPRegressor(hidden_layer_sizes=(4096, 1024, 256, 1), activation='relu', solver='sgd',
+                            max_iter=100000, early_stopping=True, learning_rate='adaptive',learning_rate_init=0.1))
+
+    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='logistic', solver='adam', max_iter=100000,
+                            early_stopping=True, learning_rate_init=0.5))
+    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='logistic', solver='sgd', max_iter=100000,
+                            early_stopping=True, learning_rate='adaptive', learning_rate_init=0.5))
+    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='relu', solver='adam', max_iter=100000,
+                            early_stopping=True, learning_rate_init=0.5))
+    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='relu', solver='sgd', max_iter=100000,
+                            early_stopping=True, learning_rate='adaptive', learning_rate_init=0.5))
+    nns.append(MLPRegressor(hidden_layer_sizes=(4096, 1024, 256, 1), activation='logistic', solver='adam',
+                            max_iter=100000, early_stopping=True, learning_rate_init=0.5))
+    nns.append(MLPRegressor(hidden_layer_sizes=(4096, 1024, 256, 1), activation='logistic', solver='sgd',
+                            max_iter=100000, early_stopping=True, learning_rate='adaptive',learning_rate_init=0.5))
+    nns.append(MLPRegressor(hidden_layer_sizes=(4096, 1024, 256, 1), activation='relu', solver='adam',
+                            max_iter=100000, early_stopping=True, learning_rate_init=0.5))
+    nns.append(MLPRegressor(hidden_layer_sizes=(4096, 1024, 256, 1), activation='relu', solver='sgd',
+                            max_iter=100000, early_stopping=True, learning_rate='adaptive',learning_rate_init=0.5))
 
     min_error = float("inf")
     best_nn = None
@@ -211,11 +245,12 @@ def neural_net_predict(training, labels, testing):
     Here the function call to nn_10fold_CV() is commented out because this step is very time comsuming.
     Instead, I hardcode the best configuration I found from the cross validation.
     '''
-    # best_nn = nn_10fold_CV(training, labels)
-    # nn = MLPRegressor(hidden_layer_sizes=best_nn.hidden_layer_sizes, activation=best_nn.activation,
-    #                   solver=best_nn.solver, max_iter=best_nn.max_iter, early_stopping=best_nn.early_stopping)
-    nn = MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='relu', solver='adam', max_iter=100000,
-                      early_stopping=True)
+    best_nn = nn_10fold_CV(training, labels)
+    nn = MLPRegressor(hidden_layer_sizes=best_nn.hidden_layer_sizes, activation=best_nn.activation,
+                      solver=best_nn.solver, max_iter=best_nn.max_iter, early_stopping=best_nn.early_stopping,
+                      learning_rate=best_nn.learning_rate, learning_rate_init=best_nn.learning_rate_init)
+    # nn = MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='relu', solver='adam', max_iter=100000,
+    #                  early_stopping=True)
     nn.fit(training, labels)
     return nn.predict(training), nn.predict(testing)
 
