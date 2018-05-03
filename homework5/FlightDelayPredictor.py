@@ -125,33 +125,59 @@ def error(x, y):
 
 def ridge_predict(training, labels, testing):
     # First perform cross-validation to find the best value for alpha
-    ridgeCV = RidgeCV(alphas=[0.1, 0.2, 0.5, 1.0, 2.0, 4.0, 6.0, 8.0, 10.0])
-    ridgeCV.fit(training, labels)
-    print("Ridge regression: alpha = {0:f}".format(ridgeCV.alpha_))
+    best_alpha = ridge_cv(training, labels, [0.1, 0.2, 0.5, 1.0, 2.0, 4.0, 6.0, 8.0, 10.0])
 
     # Then perform ridge regression
-    ridge = Ridge(alpha=ridgeCV.alpha_)
+    ridge = Ridge(alpha=best_alpha)
     ridge.fit(training, labels)
     return ridge.predict(training), ridge.predict(testing)
 
-def nn_kfold_CV(training, labels):
+def ridge_cv(training, labels, alphas):
+    # Perform 10 fold cross-validation to find the best value for alpha
+    kf = KFold(n_splits=10, shuffle=True)
+
+    min_error = float("inf")
+    best_alpha = None
+    for a in alphas:
+        ridge = Ridge(alpha=a)
+        ridge_error = 0.0
+        for tr_index, te_index in kf.split(training):
+            kf_training = training.iloc[tr_index]
+            kf_labels = labels.iloc[tr_index]
+            kf_testing = training.iloc[te_index]
+            kf_testing_labels = labels.iloc[te_index]
+
+            ridge.fit(kf_training, kf_labels)
+            ridge_prediction = ridge.predict(kf_testing)
+            ridge_error += error(ridge_prediction, kf_testing_labels)
+        ridge_error /= kf.n_splits
+        print(a, ridge_error)
+        if ridge_error < min_error:
+            min_error = ridge_error
+            best_alpha = a
+    return best_alpha
+
+
+def nn_10fold_CV(training, labels):
+    '''Perform 10-fold cross validation on different configurations of neural networks.
+       Return the configuration with lowest error'''
     kf = KFold(n_splits=10, shuffle=True)
 
     nns = []
-    # nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='logistic', solver='adam', max_iter=100000,
-    #                         early_stopping=True))
-    # nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='logistic', solver='sgd', max_iter=100000,
-    #                         early_stopping=True))
-    # nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='relu', solver='adam', max_iter=100000,
-    #                         early_stopping=True))
-    # nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='relu', solver='sgd', max_iter=100000,
-    #                         early_stopping=True))
-    # nns.append(MLPRegressor(hidden_layer_sizes=(5000, 2048, 512, 128, 1), activation='logistic', solver='adam',
-    #                         max_iter=100000, early_stopping=True))
-    # nns.append(MLPRegressor(hidden_layer_sizes=(5000, 2048, 512, 128, 1), activation='logistic', solver='sgd',
-    #                         max_iter=100000, early_stopping=True))
-    # nns.append(MLPRegressor(hidden_layer_sizes=(5000, 2048, 512, 128, 1), activation='relu', solver='adam',
-    #                         max_iter=100000, early_stopping=True))
+    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='logistic', solver='adam', max_iter=100000,
+                            early_stopping=True))
+    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='logistic', solver='sgd', max_iter=100000,
+                            early_stopping=True))
+    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='relu', solver='adam', max_iter=100000,
+                            early_stopping=True))
+    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='relu', solver='sgd', max_iter=100000,
+                            early_stopping=True))
+    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 2048, 512, 128, 1), activation='logistic', solver='adam',
+                            max_iter=100000, early_stopping=True))
+    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 2048, 512, 128, 1), activation='logistic', solver='sgd',
+                            max_iter=100000, early_stopping=True))
+    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 2048, 512, 128, 1), activation='relu', solver='adam',
+                            max_iter=100000, early_stopping=True))
     nns.append(MLPRegressor(hidden_layer_sizes=(5000, 2048, 512, 128, 1), activation='relu', solver='sgd',
                             max_iter=100000, early_stopping=True))
 
@@ -177,12 +203,20 @@ def nn_kfold_CV(training, labels):
             best_nn = nn
     return best_nn
 
-
 def neural_net_predict(training, labels, testing):
+    '''
+    This function performs neural net regression.
+    The function will first run cross-validation on different configurations of the neural net,
+    and determine the best configuration to use.
+    Here the function call to nn_10fold_CV() is commented out because this step is very time comsuming.
+    Instead, I hardcode the best configuration I found from the cross validation.
+    '''
+    # best_nn = nn_10fold_CV(training, labels)
+    # nn = MLPRegressor(hidden_layer_sizes=best_nn.hidden_layer_sizes, activation=best_nn.activation,
+    #                   solver=best_nn.solver, max_iter=best_nn.max_iter, early_stopping=best_nn.early_stopping)
     nn = MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='relu', solver='adam', max_iter=100000,
                       early_stopping=True)
     nn.fit(training, labels)
-    print("Neural Net Regression")
     return nn.predict(training), nn.predict(testing)
 
 def main():
@@ -198,16 +232,15 @@ def main():
     training, labels, testing = preprocess(training, testing)
 
     # Ridge Regression
-    ridge_training_prediction, ridge_testing_prediction = ridge_predict(training, labels, testing)
-    ridge_error = error(ridge_training_prediction, labels)
-    print(ridge_error)
+    #ridge_training_prediction, ridge_testing_prediction = ridge_predict(training, labels, testing)
+    #ridge_error = error(ridge_training_prediction, labels)
+    #print(ridge_error)
 
     # Neural Net Regression
-    print(nn_kfold_CV(training, labels))
-    # nn_training_prediction, nn_testing_prediction = neural_net_predict(training, labels, testing)
-    # print(nn_training_prediction)
-    # nn_error = error(nn_training_prediction, labels)
-    # print(nn_error)
+    nn_training_prediction, nn_testing_prediction = neural_net_predict(training, labels, testing)
+    print(nn_training_prediction)
+    nn_error = error(nn_training_prediction, labels)
+    print(nn_error)
 
 
 
