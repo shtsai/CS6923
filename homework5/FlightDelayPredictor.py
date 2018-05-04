@@ -21,6 +21,11 @@ def extract_hour(row):
     hour = row["CRS_DEP_TIME"] // 100
     return hour
 
+def clean_column(column):
+    def _clean_column(row):
+        return int(row[column].replace(',', ''))
+    return _clean_column
+
 def compute_speed(row):
     '''Compute average speed of the flight'''
     speed = row["DISTANCE"] / row["ACTUAL_ELAPSED_TIME"]
@@ -62,6 +67,7 @@ def preprocess(training, testing):
 
 
     # clean DISTANCE add SPEED attribute
+    training["DISTANCE"] = training.apply(clean_column("DISTANCE"), axis=1)
     training["SPEED"] = training.apply(compute_speed, axis=1)
 
     # drop unneeded attributes
@@ -87,6 +93,7 @@ def preprocess(training, testing):
     testing, DEST = one_hot_encode(testing, "DEST")
 
     # clean DISTANCE add SPEED attribute
+    testing["DISTANCE"] = testing.apply(clean_column("DISTANCE"), axis=1)
     testing["SPEED"] = testing.apply(compute_speed, axis=1)
 
     # drop unneeded attributes
@@ -155,50 +162,7 @@ def nn_10fold_CV(training, labels):
     kf = KFold(n_splits=10, shuffle=True)
 
     nns = []
-    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='logistic', solver='adam', max_iter=100000,
-                            early_stopping=True, learning_rate_init=0.01))
-    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='logistic', solver='sgd', max_iter=100000,
-                            early_stopping=True, learning_rate='adaptive', learning_rate_init=0.01))
-    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='relu', solver='adam', max_iter=100000,
-                            early_stopping=True, learning_rate_init=0.01))
-    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='relu', solver='sgd', max_iter=100000,
-                            early_stopping=True, learning_rate='adaptive', learning_rate_init=0.01))
-    nns.append(MLPRegressor(hidden_layer_sizes=(4096, 1024, 256, 1), activation='logistic', solver='adam',
-                            max_iter=100000, early_stopping=True, learning_rate_init=0.01))
-    nns.append(MLPRegressor(hidden_layer_sizes=(4096, 1024, 256, 1), activation='logistic', solver='sgd',
-                            max_iter=100000, early_stopping=True, learning_rate='adaptive',learning_rate_init=0.01))
-    nns.append(MLPRegressor(hidden_layer_sizes=(4096, 1024, 256, 1), activation='relu', solver='adam',
-                            max_iter=100000, early_stopping=True, learning_rate_init=0.01))
-    nns.append(MLPRegressor(hidden_layer_sizes=(4096, 1024, 256, 1), activation='relu', solver='sgd',
-                            max_iter=100000, early_stopping=True, learning_rate='adaptive',learning_rate_init=0.01))
-
-    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='logistic', solver='adam', max_iter=100000,
-                            early_stopping=True, learning_rate_init=0.1))
-    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='logistic', solver='sgd', max_iter=100000,
-                            early_stopping=True, learning_rate='adaptive', learning_rate_init=0.1))
-    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='relu', solver='adam', max_iter=100000,
-                            early_stopping=True, learning_rate_init=0.1))
-    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='relu', solver='sgd', max_iter=100000,
-                            early_stopping=True, learning_rate='adaptive', learning_rate_init=0.1))
-    nns.append(MLPRegressor(hidden_layer_sizes=(4096, 1024, 256, 1), activation='logistic', solver='adam',
-                            max_iter=100000, early_stopping=True, learning_rate_init=0.1))
-    nns.append(MLPRegressor(hidden_layer_sizes=(4096, 1024, 256, 1), activation='logistic', solver='sgd',
-                            max_iter=100000, early_stopping=True, learning_rate='adaptive',learning_rate_init=0.1))
-    nns.append(MLPRegressor(hidden_layer_sizes=(4096, 1024, 256, 1), activation='relu', solver='adam',
-                            max_iter=100000, early_stopping=True, learning_rate_init=0.1))
-    nns.append(MLPRegressor(hidden_layer_sizes=(4096, 1024, 256, 1), activation='relu', solver='sgd',
-                            max_iter=100000, early_stopping=True, learning_rate='adaptive',learning_rate_init=0.1))
-
-    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='logistic', solver='adam', max_iter=100000,
-                            early_stopping=True, learning_rate_init=0.5))
-    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='logistic', solver='sgd', max_iter=100000,
-                            early_stopping=True, learning_rate='adaptive', learning_rate_init=0.5))
-    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='relu', solver='adam', max_iter=100000,
-                            early_stopping=True, learning_rate_init=0.5))
-    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='relu', solver='sgd', max_iter=100000,
-                            early_stopping=True, learning_rate='adaptive', learning_rate_init=0.5))
-    nns.append(MLPRegressor(hidden_layer_sizes=(4096, 1024, 256, 1), activation='logistic', solver='adam',
-                            max_iter=100000, early_stopping=True, learning_rate_init=0.5))
+    ## TODO add here
     nns.append(MLPRegressor(hidden_layer_sizes=(4096, 1024, 256, 1), activation='logistic', solver='sgd',
                             max_iter=100000, early_stopping=True, learning_rate='adaptive',learning_rate_init=0.5))
     nns.append(MLPRegressor(hidden_layer_sizes=(4096, 1024, 256, 1), activation='relu', solver='adam',
@@ -240,8 +204,8 @@ def neural_net_predict(training, labels, testing):
     nn = MLPRegressor(hidden_layer_sizes=best_nn.hidden_layer_sizes, activation=best_nn.activation,
                       solver=best_nn.solver, max_iter=best_nn.max_iter, early_stopping=best_nn.early_stopping,
                       learning_rate=best_nn.learning_rate, learning_rate_init=best_nn.learning_rate_init)
-    # nn = MLPRegressor(hidden_layer_sizes=(5000, 500, 1), activation='relu', solver='adam', max_iter=100000,
-    #                  early_stopping=True)
+    #nn = MLPRegressor(hidden_layer_sizes=(10000, 1000), activation='relu', solver='adam', max_iter=100000,
+    #                  learning_rate_init=0.0005, alpha=0.00000, early_stopping=True)
     nn.fit(training, labels)
     return nn.predict(training), nn.predict(testing)
 
@@ -258,14 +222,15 @@ def main():
     training, labels, testing = preprocess(training, testing)
 
     # Ridge Regression
-    ridge_training_prediction, ridge_testing_prediction = ridge_predict(training, labels, testing)
-    ridge_error = error(ridge_training_prediction, labels)
-    print(ridge_error)
+    #ridge_training_prediction, ridge_testing_prediction = ridge_predict(training, labels, testing)
+    #ridge_error = error(ridge_training_prediction, labels)
+    #print(ridge_error)
 
     # Neural Net Regression
     nn_training_prediction, nn_testing_prediction = neural_net_predict(training, labels, testing)
     print(nn_training_prediction)
     nn_error = error(nn_training_prediction, labels)
+    print(nn_error)
     print(nn_error)
 
 
