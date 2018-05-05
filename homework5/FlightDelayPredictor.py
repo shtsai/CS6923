@@ -1,4 +1,4 @@
-import sys
+import sys, csv
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
@@ -155,26 +155,36 @@ def ridge_cv(training, labels, alphas):
             best_alpha = a
     return best_alpha
 
-
 def nn_10fold_CV(training, labels):
     '''Perform 10-fold cross validation on different configurations of neural networks.
        Return the configuration with lowest error'''
     kf = KFold(n_splits=10, shuffle=True)
 
     nns = []
-    ## TODO add here
-    nns.append(MLPRegressor(hidden_layer_sizes=(4096, 1024, 256, 1), activation='logistic', solver='sgd',
-                            max_iter=100000, early_stopping=True, learning_rate='adaptive',learning_rate_init=0.5))
-    nns.append(MLPRegressor(hidden_layer_sizes=(4096, 1024, 256, 1), activation='relu', solver='adam',
-                            max_iter=100000, early_stopping=True, learning_rate_init=0.5))
-    nns.append(MLPRegressor(hidden_layer_sizes=(4096, 1024, 256, 1), activation='relu', solver='sgd',
-                            max_iter=100000, early_stopping=True, learning_rate='adaptive',learning_rate_init=0.5))
+    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500), activation='relu', solver='adam',
+                            max_iter=100000, early_stopping=True, learning_rate_init=0.0001, alpha=0.0))
+    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500), activation='relu', solver='adam',
+                            max_iter=100000, early_stopping=True, learning_rate_init=0.0001, alpha=0.000001))
+    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500), activation='relu', solver='adam',
+                            max_iter=100000, early_stopping=True, learning_rate_init=0.0005, alpha=0.0))
+    nns.append(MLPRegressor(hidden_layer_sizes=(5000, 500), activation='relu', solver='adam',
+                            max_iter=100000, early_stopping=True, learning_rate_init=0.0005, alpha=0.000001))
+    nns.append(MLPRegressor(hidden_layer_sizes=(10000, 1000), activation='relu', solver='adam',
+                            max_iter=100000, early_stopping=True, learning_rate_init=0.0001, alpha=0.0))
+    nns.append(MLPRegressor(hidden_layer_sizes=(10000, 1000), activation='relu', solver='adam',
+                            max_iter=100000, early_stopping=True, learning_rate_init=0.0001, alpha=0.000001))
+    nns.append(MLPRegressor(hidden_layer_sizes=(10000, 1000), activation='relu', solver='adam',
+                            max_iter=100000, early_stopping=True, learning_rate_init=0.0005, alpha=0.0))
+    nns.append(MLPRegressor(hidden_layer_sizes=(10000, 1000), activation='relu', solver='adam',
+                            max_iter=100000, early_stopping=True, learning_rate_init=0.0005, alpha=0.000001))
 
     min_error = float("inf")
     best_nn = None
 
+    # Try different neural net configurations
     for nn in nns:
         nn_error = 0.0
+        # Cross validation
         for tr_index, te_index in kf.split(training):
             kf_training = training.iloc[tr_index]
             kf_labels = labels.iloc[tr_index]
@@ -183,6 +193,7 @@ def nn_10fold_CV(training, labels):
 
             nn.fit(kf_training, kf_labels)
             nn_prediction = nn.predict(kf_testing)
+            print(nn_prediction)
             nn_error += error(nn_prediction, kf_testing_labels)
         nn_error /= kf.n_splits
         print(nn)
@@ -197,17 +208,25 @@ def neural_net_predict(training, labels, testing):
     This function performs neural net regression.
     The function will first run cross-validation on different configurations of the neural net,
     and determine the best configuration to use.
-    Here the function call to nn_10fold_CV() is commented out because this step is very time comsuming.
-    Instead, I hardcode the best configuration I found from the cross validation.
+    Here the function call to nn_10fold_CV() is commented out because this step is very time consuming.
+    Instead, I hard-code the best configuration I found from the cross validation.
     '''
-    best_nn = nn_10fold_CV(training, labels)
-    nn = MLPRegressor(hidden_layer_sizes=best_nn.hidden_layer_sizes, activation=best_nn.activation,
-                      solver=best_nn.solver, max_iter=best_nn.max_iter, early_stopping=best_nn.early_stopping,
-                      learning_rate=best_nn.learning_rate, learning_rate_init=best_nn.learning_rate_init)
-    #nn = MLPRegressor(hidden_layer_sizes=(10000, 1000), activation='relu', solver='adam', max_iter=100000,
-    #                  learning_rate_init=0.0005, alpha=0.00000, early_stopping=True)
+    #best_nn = nn_10fold_CV(training, labels)
+    #nn = MLPRegressor(hidden_layer_sizes=best_nn.hidden_layer_sizes, activation=best_nn.activation,
+    #                  solver=best_nn.solver, max_iter=best_nn.max_iter, early_stopping=best_nn.early_stopping,
+    #                  learning_rate=best_nn.learning_rate, learning_rate_init=best_nn.learning_rate_init)
+    nn = MLPRegressor(hidden_layer_sizes=(5000, 500), activation='relu', solver='adam', max_iter=100000,
+                      learning_rate_init=0.0001, alpha=0.00000, early_stopping=True)
     nn.fit(training, labels)
     return nn.predict(training), nn.predict(testing)
+
+def output_csv(id, prediction):
+    '''This function output id and corresponding prediction to a csv file'''
+    with open('test_outputs.csv', 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(["Id", "Delay"])
+        for i in range(len(id)):
+            writer.writerow([id[i]] + [prediction[i]])
 
 def main():
     # Read training and testing data
@@ -222,18 +241,16 @@ def main():
     training, labels, testing = preprocess(training, testing)
 
     # Ridge Regression
-    #ridge_training_prediction, ridge_testing_prediction = ridge_predict(training, labels, testing)
-    #ridge_error = error(ridge_training_prediction, labels)
-    #print(ridge_error)
+    ridge_training_prediction, ridge_testing_prediction = ridge_predict(training, labels, testing)
+    ridge_error = error(ridge_training_prediction, labels)
+    print(ridge_error)
+    output_csv(testing_id, ridge_testing_prediction)
 
     # Neural Net Regression
-    nn_training_prediction, nn_testing_prediction = neural_net_predict(training, labels, testing)
-    print(nn_training_prediction)
-    nn_error = error(nn_training_prediction, labels)
-    print(nn_error)
-    print(nn_error)
-
-
+    #nn_training_prediction, nn_testing_prediction = neural_net_predict(training, labels, testing)
+    #print(nn_training_prediction)
+    #nn_error = error(nn_training_prediction, labels)
+    #print(nn_error)
 
 if __name__ == "__main__":
     main()
