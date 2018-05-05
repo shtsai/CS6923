@@ -1,4 +1,4 @@
-import sys
+import sys, csv
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
@@ -155,7 +155,6 @@ def ridge_cv(training, labels, alphas):
             best_alpha = a
     return best_alpha
 
-
 def nn_10fold_CV(training, labels):
     '''Perform 10-fold cross validation on different configurations of neural networks.
        Return the configuration with lowest error'''
@@ -221,6 +220,14 @@ def neural_net_predict(training, labels, testing):
     nn.fit(training, labels)
     return nn.predict(training), nn.predict(testing)
 
+def output_csv(id, prediction):
+    '''This function output id and corresponding prediction to a csv file'''
+    with open('test_outputs.csv', 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(["Id", "Delay"])
+        for i in range(len(id)):
+            writer.writerow([id[i]] + [prediction[i]])
+
 def main():
     # Read training and testing data
     training_file = sys.argv[1]
@@ -237,14 +244,13 @@ def main():
     ridge_training_prediction, ridge_testing_prediction = ridge_predict(training, labels, testing)
     ridge_error = error(ridge_training_prediction, labels)
     print(ridge_error)
+    output_csv(testing_id, ridge_testing_prediction)
 
     # Neural Net Regression
     #nn_training_prediction, nn_testing_prediction = neural_net_predict(training, labels, testing)
     #print(nn_training_prediction)
     #nn_error = error(nn_training_prediction, labels)
     #print(nn_error)
-
-
 
 if __name__ == "__main__":
     main()
