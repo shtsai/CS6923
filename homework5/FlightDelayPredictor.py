@@ -1,3 +1,10 @@
+#
+#   CS6923 Machine Learning
+#   Homework 5
+#   Shang-Hung Tsai
+#   Chang Liu
+#
+
 import sys, csv
 import pandas as pd
 import numpy as np
@@ -124,6 +131,7 @@ def error(x, y):
 def ridge_predict(training, labels, testing):
     # First perform cross-validation to find the best value for alpha
     best_alpha = ridge_cv(training, labels, [0.1, 0.2, 0.5, 1.0, 2.0, 4.0, 6.0, 8.0, 10.0])
+    print("The best alpha is {0:f}".format(best_alpha))
 
     # Then perform ridge regression
     ridge = Ridge(alpha=best_alpha)
@@ -133,6 +141,8 @@ def ridge_predict(training, labels, testing):
 def ridge_cv(training, labels, alphas):
     # Perform 10 fold cross-validation to find the best value for alpha
     kf = KFold(n_splits=10, shuffle=True)
+    print("Cross validation")
+    print("alpha  error")
 
     min_error = float("inf")
     best_alpha = None
@@ -243,7 +253,7 @@ def main():
     # Ridge Regression
     ridge_training_prediction, ridge_testing_prediction = ridge_predict(training, labels, testing)
     ridge_error = error(ridge_training_prediction, labels)
-    print(ridge_error)
+    print("Training error = {0:f}".format(ridge_error))
     output_csv(testing_id, ridge_testing_prediction)
 
     # Neural Net Regression
