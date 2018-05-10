@@ -2,7 +2,7 @@ import sys
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import Ridge, RidgeCV
+from sklearn.linear_model import Ridge, Lasso
 from sklearn.neural_network import MLPRegressor
 from sklearn.model_selection import KFold
 
@@ -117,9 +117,11 @@ def preprocess(training, testing):
 
     return training, labels, testing
 
+
 def error(x, y):
     N = len(x)
     return np.sum(np.square(x - y)) / N
+
 
 def ridge_predict(training, labels, testing):
     # First perform cross-validation to find the best value for alpha
@@ -129,6 +131,7 @@ def ridge_predict(training, labels, testing):
     ridge = Ridge(alpha=best_alpha)
     ridge.fit(training, labels)
     return ridge.predict(training), ridge.predict(testing)
+
 
 def ridge_cv(training, labels, alphas):
     # Perform 10 fold cross-validation to find the best value for alpha
@@ -152,6 +155,42 @@ def ridge_cv(training, labels, alphas):
         print(a, ridge_error)
         if ridge_error < min_error:
             min_error = ridge_error
+            best_alpha = a
+    return best_alpha
+
+
+def lasso_predict(training, labels, testing):
+    # First perform cross-validation to find the best value for alpha
+    best_alpha = lasso_cv(training, labels, [0.1, 0.2, 0.5, 1.0, 2.0, 4.0, 6.0, 8.0, 10.0])
+
+    # Then perform ridge regression
+    lasso = Lasso(alpha=best_alpha)
+    lasso.fit(training, labels)
+    return lasso.predict(training), lasso.predict(testing)
+
+
+def lasso_cv(training, labels, alphas):
+    # Perform 10 fold cross-validation to find the best value for alpha
+    kf = KFold(n_splits=10, shuffle=True)
+
+    min_error = float("inf")
+    best_alpha = None
+    for a in alphas:
+        lasso = Lasso(alpha=a)
+        lasso_error = 0.0
+        for tr_index, te_index in kf.split(training):
+            kf_training = training.iloc[tr_index]
+            kf_labels = labels.iloc[tr_index]
+            kf_testing = training.iloc[te_index]
+            kf_testing_labels = labels.iloc[te_index]
+
+            lasso.fit(kf_training, kf_labels)
+            lasso_prediction = lasso.predict(kf_testing)
+            lasso_error += error(lasso_prediction, kf_testing_labels)
+        lasso_error /= kf.n_splits
+        print(a, lasso_error)
+        if lasso_error < min_error:
+            min_error = lasso_error
             best_alpha = a
     return best_alpha
 
@@ -226,12 +265,18 @@ def main():
     #ridge_error = error(ridge_training_prediction, labels)
     #print(ridge_error)
 
+    # Lasso Regression
+    lasso_training_prediction, ridge_testing_prediction = lasso_predict(training, labels, testing)
+    lasso_error = error(lasso_training_prediction, labels)
+    print(lasso_error)
+
+
     # Neural Net Regression
-    nn_training_prediction, nn_testing_prediction = neural_net_predict(training, labels, testing)
-    print(nn_training_prediction)
-    nn_error = error(nn_training_prediction, labels)
-    print(nn_error)
-    print(nn_error)
+    # nn_training_prediction, nn_testing_prediction = neural_net_predict(training, labels, testing)
+    # print(nn_training_prediction)
+    # nn_error = error(nn_training_prediction, labels)
+    # print(nn_error)
+    # print(nn_error)
 
 
 
