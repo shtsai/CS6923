@@ -266,7 +266,7 @@ def neural_net_predict(training, labels, testing):
     #                  solver=best_nn.solver, max_iter=best_nn.max_iter, early_stopping=best_nn.early_stopping,
     #                  learning_rate=best_nn.learning_rate, learning_rate_init=best_nn.learning_rate_init)
     nn = MLPRegressor(hidden_layer_sizes=(5000, 500), activation='relu', solver='adam', max_iter=100000,
-                      learning_rate_init=0.0001, alpha=0.00000, early_stopping=True)
+                      learning_rate_init=0.0001, alpha=0.000001, early_stopping=True)
     nn.fit(training, labels)
     return nn.predict(training), nn.predict(testing)
 
@@ -291,23 +291,21 @@ def main():
     training, labels, testing = preprocess(training, testing)
 
     # Ridge Regression
-    ridge_training_prediction, ridge_testing_prediction = ridge_predict(training, labels, testing)
-    ridge_error = error(ridge_training_prediction, labels)
-    print("Training error = {0:f}".format(ridge_error))
-    # output_csv(testing_id, ridge_testing_prediction)
+    # ridge_training_prediction, ridge_testing_prediction = ridge_predict(training, labels, testing)
+    # ridge_error = error(ridge_training_prediction, labels)
+    # print("Training error = {0:f}".format(ridge_error))
 
     # Lasso Regression
-    lasso_training_prediction, ridge_testing_prediction = lasso_predict(training, labels, testing)
-    lasso_error = error(lasso_training_prediction, labels)
-    print(lasso_error)
+    # lasso_training_prediction, ridge_testing_prediction = lasso_predict(training, labels, testing)
+    # lasso_error = error(lasso_training_prediction, labels)
+    # print(lasso_error)
 
 
     # Neural Net Regression
-    # nn_training_prediction, nn_testing_prediction = neural_net_predict(training, labels, testing)
-    # print(nn_training_prediction)
-    # nn_error = error(nn_training_prediction, labels)
-    # print(nn_error)
-    # print(nn_error)
+    nn_training_prediction, nn_testing_prediction = neural_net_predict(training, labels, testing)
+    nn_error = error(nn_training_prediction, labels)
+    print(nn_error)
+    output_csv(testing_id, nn_testing_prediction)
 
 
 if __name__ == "__main__":
